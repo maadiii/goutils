@@ -1,4 +1,4 @@
-module utils
+module github.com/maadiii/utils
 
 go 1.24.3
 
