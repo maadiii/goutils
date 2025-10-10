@@ -12,7 +12,6 @@ import (
 
 type zapLogger struct {
 	logger    *zap.Logger
-	async     bool
 	ch        chan func()
 	done      chan struct{}
 	batchSize int
@@ -20,62 +19,51 @@ type zapLogger struct {
 }
 
 func Zap(cfg Config) Logger {
-	cores := make([]zapcore.Core, 0)
-
-	for i := range cfg.Writers {
-		var ws []zapcore.WriteSyncer
-		if cfg.Writers[i].Stdout {
-			ws = append(ws, zapcore.AddSync(os.Stdout))
+	var ws []zapcore.WriteSyncer
+	if cfg.Writer.Stdout {
+		ws = append(ws, zapcore.AddSync(os.Stdout))
+	}
+	if cfg.Writer.FileConfig != nil {
+		lw := &lumberjack.Logger{
+			Filename:   cfg.Writer.FileConfig.Filename,
+			MaxSize:    cfg.Writer.FileConfig.MaxSize,
+			MaxBackups: cfg.Writer.FileConfig.MaxBackups,
+			MaxAge:     cfg.Writer.FileConfig.MaxAge,
+			Compress:   cfg.Writer.FileConfig.Compress,
 		}
-		if cfg.Writers[i].File {
-			lw := &lumberjack.Logger{
-				Filename:   cfg.Writers[i].FileConfig.Filename,
-				MaxSize:    cfg.Writers[i].FileConfig.MaxSize,
-				MaxBackups: cfg.Writers[i].FileConfig.MaxBackups,
-				MaxAge:     cfg.Writers[i].FileConfig.MaxAge,
-				Compress:   cfg.Writers[i].FileConfig.Compress,
-			}
-			ws = append(ws, zapcore.AddSync(lw))
-		}
-
-		multi := zapcore.NewMultiWriteSyncer(ws...)
-
-		encCfg := zapcore.EncoderConfig{
-			TimeKey:        "ts",
-			LevelKey:       "lvl",
-			NameKey:        "logger",
-			CallerKey:      "",
-			MessageKey:     "msg",
-			StacktraceKey:  "",
-			LineEnding:     zapcore.DefaultLineEnding,
-			EncodeLevel:    zapcore.LowercaseLevelEncoder,
-			EncodeTime:     zapcore.EpochTimeEncoder,
-			EncodeDuration: zapcore.SecondsDurationEncoder,
-		}
-
-		level, err := zapcore.ParseLevel(cfg.Level.String())
-		if err != nil {
-			panic(err)
-		}
-
-		encoder := zapcore.NewJSONEncoder(encCfg)
-		core := zapcore.NewCore(encoder, multi, level)
-		cores = append(cores, core)
+		ws = append(ws, zapcore.AddSync(lw))
 	}
 
-	finalCore := zapcore.NewTee(cores...)
+	encCfg := zapcore.EncoderConfig{
+		TimeKey:        "time",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		MessageKey:     "message",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeTime:     zapcore.EpochTimeEncoder,
+		EncodeDuration: zapcore.SecondsDurationEncoder,
+	}
+
+	level, err := zapcore.ParseLevel(cfg.Level.String())
+	if err != nil {
+		panic(err)
+	}
+
+	multi := zapcore.NewMultiWriteSyncer(ws...)
+	encoder := zapcore.NewJSONEncoder(encCfg)
+	core := zapcore.NewCore(encoder, multi, level)
+	finalCore := zapcore.NewTee(core)
+
 	zl := &zapLogger{
 		logger:    zap.New(finalCore),
-		async:     cfg.Async,
 		ch:        make(chan func(), cfg.QueueSize),
 		done:      make(chan struct{}),
 		batchSize: cfg.BatchSize,
 		batchDur:  cfg.BatchDur,
 	}
 
-	if cfg.Async {
-		go zl.worker()
-	}
+	go zl.worker()
 
 	return zl
 }
@@ -97,23 +85,17 @@ func (z *zapLogger) Error(ctx context.Context, msg string, fields ...any) {
 }
 
 func (z *zapLogger) Sync() error {
-	if z.async {
-		close(z.ch)
-		<-z.done
-	}
+	close(z.ch)
+	<-z.done
 
 	return z.logger.Sync()
 }
 
 func (z *zapLogger) log(fn func()) {
-	if z.async {
-		select {
-		case z.ch <- fn:
-		default:
-			// Drop log if full
-		}
-	} else {
-		fn()
+	select {
+	case z.ch <- fn:
+	default:
+		// Drop log if full
 	}
 }
 

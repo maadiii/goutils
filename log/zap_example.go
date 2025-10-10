@@ -8,24 +8,21 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-func ExampleAsync() {
+func ZapExample() {
 	cfg := Config{
 		Level: DebugLevel,
-		Writers: []WriterConfig{
-			{
-				File: true,
-				FileConfig: lumberjack.Logger{
-					Filename:   "app.log",
-					MaxSize:    100,
-					MaxBackups: 3,
-					MaxAge:     30,
-					Compress:   true,
-				},
+		Writer: WriterConfig{
+			Stdout: true,
+			FileConfig: &lumberjack.Logger{
+				Filename:   "app.log",
+				MaxSize:    100,
+				MaxBackups: 3,
+				MaxAge:     30,
+				Compress:   true,
 			},
 		},
 
-		Async:     true,
-		QueueSize: 100000,
+		QueueSize: 1000000,
 		BatchSize: 1000,
 		BatchDur:  time.Second,
 	}

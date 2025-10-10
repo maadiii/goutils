@@ -17,8 +17,7 @@ type Logger interface {
 
 type Config struct {
 	Level     Level
-	Writers   []WriterConfig
-	Async     bool
+	Writer    WriterConfig
 	QueueSize int
 	BatchSize int
 	BatchDur  time.Duration
@@ -26,8 +25,7 @@ type Config struct {
 
 type WriterConfig struct {
 	Stdout     bool
-	File       bool
-	FileConfig lumberjack.Logger
+	FileConfig *lumberjack.Logger
 }
 
 type Level string
