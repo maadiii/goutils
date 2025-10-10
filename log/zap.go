@@ -2,136 +2,154 @@ package log
 
 import (
 	"context"
-	"io"
 	"os"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-// ZapLogger implements Logger interface
-type ZapLogger struct {
-	logger *zap.Logger
-	async  bool
-	ch     chan func()
-	done   chan struct{}
+type zapLogger struct {
+	logger    *zap.Logger
+	async     bool
+	ch        chan func()
+	done      chan struct{}
+	batchSize int
+	batchDur  time.Duration
 }
 
-// New creates a new ZapLogger with multi-writer and optional Lumberjack
-func New(cfg *Config) Logger {
-	var writers []io.Writer
+func Zap(cfg Config) Logger {
+	cores := make([]zapcore.Core, 0)
 
-	if len(cfg.Writers) == 0 && !cfg.UseLumberjack {
-		writers = []io.Writer{os.Stdout}
-	} else {
-		writers = cfg.Writers
-	}
-
-	if cfg.UseLumberjack {
-		lumberjackWriter := &lumberjack.Logger{
-			Filename:   cfg.LumberjackConfig.Filename,
-			MaxSize:    cfg.LumberjackConfig.MaxSize,
-			MaxBackups: cfg.LumberjackConfig.MaxBackups,
-			MaxAge:     cfg.LumberjackConfig.MaxAge,
-			Compress:   cfg.LumberjackConfig.Compress,
+	for i := range cfg.Writers {
+		var ws []zapcore.WriteSyncer
+		if cfg.Writers[i].Stdout {
+			ws = append(ws, zapcore.AddSync(os.Stdout))
 		}
-		writers = append(writers, lumberjackWriter)
+		if cfg.Writers[i].File {
+			lw := &lumberjack.Logger{
+				Filename:   cfg.Writers[i].FileConfig.Filename,
+				MaxSize:    cfg.Writers[i].FileConfig.MaxSize,
+				MaxBackups: cfg.Writers[i].FileConfig.MaxBackups,
+				MaxAge:     cfg.Writers[i].FileConfig.MaxAge,
+				Compress:   cfg.Writers[i].FileConfig.Compress,
+			}
+			ws = append(ws, zapcore.AddSync(lw))
+		}
+
+		multi := zapcore.NewMultiWriteSyncer(ws...)
+
+		encCfg := zapcore.EncoderConfig{
+			TimeKey:        "ts",
+			LevelKey:       "lvl",
+			NameKey:        "logger",
+			CallerKey:      "",
+			MessageKey:     "msg",
+			StacktraceKey:  "",
+			LineEnding:     zapcore.DefaultLineEnding,
+			EncodeLevel:    zapcore.LowercaseLevelEncoder,
+			EncodeTime:     zapcore.EpochTimeEncoder,
+			EncodeDuration: zapcore.SecondsDurationEncoder,
+		}
+
+		level, err := zapcore.ParseLevel(cfg.Level.String())
+		if err != nil {
+			panic(err)
+		}
+
+		encoder := zapcore.NewJSONEncoder(encCfg)
+		core := zapcore.NewCore(encoder, multi, level)
+		cores = append(cores, core)
 	}
 
-	if cfg.QueueSize <= 0 {
-		cfg.QueueSize = 1024
-	}
-
-	multi := io.MultiWriter(writers...)
-
-	encoderCfg := zapcore.EncoderConfig{
-		TimeKey:      "time",
-		LevelKey:     "level",
-		NameKey:      "logger",
-		MessageKey:   "msg",
-		CallerKey:    "caller",
-		EncodeTime:   zapcore.ISO8601TimeEncoder,
-		EncodeLevel:  zapcore.CapitalColorLevelEncoder,
-		EncodeCaller: zapcore.ShortCallerEncoder,
-	}
-
-	level, err := zapcore.ParseLevel(cfg.Level.String())
-	if err != nil {
-		panic(err)
-	}
-
-	core := zapcore.NewCore(
-		zapcore.NewJSONEncoder(encoderCfg),
-		zapcore.AddSync(multi),
-		level,
-	)
-
-	zl := &ZapLogger{
-		logger: zap.New(core),
-		async:  cfg.Async,
+	finalCore := zapcore.NewTee(cores...)
+	zl := &zapLogger{
+		logger:    zap.New(finalCore),
+		async:     cfg.Async,
+		ch:        make(chan func(), cfg.QueueSize),
+		done:      make(chan struct{}),
+		batchSize: cfg.BatchSize,
+		batchDur:  cfg.BatchDur,
 	}
 
 	if cfg.Async {
-		zl.ch = make(chan func(), cfg.QueueSize)
-		zl.done = make(chan struct{})
 		go zl.worker()
 	}
 
 	return zl
 }
 
-func (z *ZapLogger) Debug(ctx context.Context, msg string, fields ...any) {
-	z.log(func() {
-		z.logger.Sugar().Debugw(msg, fields...)
-	})
+func (z *zapLogger) Debug(ctx context.Context, msg string, fields ...any) {
+	z.log(func() { z.logger.Sugar().Debugw(msg, fields...) })
 }
 
-func (z *ZapLogger) Info(ctx context.Context, msg string, fields ...any) {
-	z.log(func() {
-		z.logger.Sugar().Infow(msg, fields...)
-	})
+func (z *zapLogger) Info(ctx context.Context, msg string, fields ...any) {
+	z.log(func() { z.logger.Sugar().Infow(msg, fields...) })
 }
 
-func (z *ZapLogger) Warn(ctx context.Context, msg string, fields ...any) {
-	z.log(func() {
-		z.logger.Sugar().Warnw(msg, fields...)
-	})
+func (z *zapLogger) Warn(ctx context.Context, msg string, fields ...any) {
+	z.log(func() { z.logger.Sugar().Warnw(msg, fields...) })
 }
 
-func (z *ZapLogger) Error(ctx context.Context, msg string, fields ...any) {
-	z.log(func() {
-		z.logger.Sugar().Errorw(msg, fields...)
-	})
+func (z *zapLogger) Error(ctx context.Context, msg string, fields ...any) {
+	z.log(func() { z.logger.Sugar().Errorw(msg, fields...) })
 }
 
-func (z *ZapLogger) Sync() error {
+func (z *zapLogger) Sync() error {
 	if z.async {
 		close(z.ch)
 		<-z.done
 	}
+
 	return z.logger.Sync()
 }
 
-func (z *ZapLogger) log(fn func()) {
+func (z *zapLogger) log(fn func()) {
 	if z.async {
-		z.enqueue(fn)
+		select {
+		case z.ch <- fn:
+		default:
+			// Drop log if full
+		}
 	} else {
 		fn()
 	}
 }
 
-func (z *ZapLogger) worker() {
-	for fn := range z.ch {
-		fn()
-	}
-	close(z.done)
-}
+func (z *zapLogger) worker() {
+	batch := make([]func(), 0, z.batchSize)
+	timer := time.NewTimer(z.batchDur)
+	defer timer.Stop()
 
-func (z *ZapLogger) enqueue(fn func()) {
-	select {
-	case z.ch <- fn:
-	default:
-		// Drop log if queue full
+	for {
+		select {
+		case fn, ok := <-z.ch:
+			if !ok {
+				// flush remaining
+				for _, f := range batch {
+					f()
+				}
+				close(z.done)
+
+				return
+			}
+			batch = append(batch, fn)
+			if len(batch) >= z.batchSize {
+				for _, f := range batch {
+					f()
+				}
+				batch = batch[:0]
+				timer.Reset(z.batchDur)
+			}
+		case <-timer.C:
+			if len(batch) > 0 {
+				for _, f := range batch {
+					f()
+				}
+				batch = batch[:0]
+			}
+			timer.Reset(z.batchDur)
+		}
 	}
 }

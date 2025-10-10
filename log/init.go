@@ -2,7 +2,7 @@ package log
 
 import (
 	"context"
-	"io"
+	"time"
 
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -15,17 +15,21 @@ type Logger interface {
 	Sync() error
 }
 
-// Config holds logger configuration
 type Config struct {
-	Level            Level
-	Writers          []io.Writer // multi-writer
-	Async            bool
-	QueueSize        int
-	UseLumberjack    bool              // enable lumberjack rotation
-	LumberjackConfig lumberjack.Logger // pass lumberjack config if needed
+	Level     Level
+	Writers   []WriterConfig
+	Async     bool
+	QueueSize int
+	BatchSize int
+	BatchDur  time.Duration
 }
 
-// Level defines log severity levels.
+type WriterConfig struct {
+	Stdout     bool
+	File       bool
+	FileConfig lumberjack.Logger
+}
+
 type Level string
 
 func (l Level) String() string {
