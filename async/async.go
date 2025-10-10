@@ -2,8 +2,7 @@ package async
 
 import (
 	"context"
-
-	"utils/errors"
+	"fmt"
 )
 
 type Future[E any] interface {
@@ -51,7 +50,7 @@ func (a *async[E]) Await() (E, error) {
 func handlePanic[E any](ctx context.Context, a *async[E]) {
 	if r := recover(); r != nil {
 		result := FutureResult[E]{
-			Err: errors.New("%v", r),
+			Err: fmt.Errorf("%v", r),
 		}
 
 		select {
