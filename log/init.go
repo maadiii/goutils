@@ -40,3 +40,13 @@ const (
 	WarnLevel  Level = "warn"
 	ErrorLevel Level = "error"
 )
+
+type loggerKey struct{}
+
+func WithContext(ctx context.Context, logger Logger) context.Context {
+	return context.WithValue(ctx, loggerKey{}, logger)
+}
+
+func FromContext(ctx context.Context) Logger {
+	return ctx.Value(loggerKey{}).(Logger)
+}
