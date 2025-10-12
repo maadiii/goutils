@@ -1,6 +1,9 @@
 package utils
 
 import (
+	"context"
+	"time"
+
 	"github.com/maadiii/utils/paseto"
 	"github.com/maadiii/utils/totp"
 )
@@ -13,4 +16,10 @@ type TOTP interface {
 type Paseto interface {
 	Generate(claims *paseto.Claims) (string, error)
 	Validate(token string) (claims *paseto.Claims, err error)
+}
+
+type Cache interface {
+	Set(ctx context.Context, key string, value any, ttl time.Duration) error
+	Get(ctx context.Context, key string) (value string, err error)
+	Del(ctx context.Context, keys ...string) (err error)
 }
