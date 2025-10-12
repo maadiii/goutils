@@ -1,7 +1,6 @@
 package totp
 
 import (
-	"context"
 	"errors"
 	"time"
 
@@ -15,7 +14,7 @@ func New() *totp {
 
 type totp struct{}
 
-func (t *totp) Generate(ctx context.Context, opts Opts) (secret string, code string, err error) {
+func (t *totp) Generate(opts Opts) (secret string, code string, err error) {
 	key, err := ttp.Generate(ttp.GenerateOpts{
 		Issuer:      opts.Issuer,
 		AccountName: opts.AccountName,
