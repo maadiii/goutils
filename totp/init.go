@@ -9,11 +9,6 @@ import (
 	ttp "github.com/pquerna/otp/totp"
 )
 
-type TOTP interface {
-	Generate(ctx context.Context, opts Opts) (secret string, code string, err error)
-	Validate(ctx context.Context, secret, code string) (err error)
-}
-
 func New() *totp {
 	return &totp{}
 }
