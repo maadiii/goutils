@@ -24,14 +24,15 @@ func Zap(cfg Config) Logger {
 		ws = append(ws, zapcore.AddSync(os.Stdout))
 	}
 	if cfg.Writer.FileConfig != nil {
-		lw := &lumberjack.Logger{
-			Filename:   cfg.Writer.FileConfig.Filename,
-			MaxSize:    cfg.Writer.FileConfig.MaxSize,
-			MaxBackups: cfg.Writer.FileConfig.MaxBackups,
-			MaxAge:     cfg.Writer.FileConfig.MaxAge,
-			Compress:   cfg.Writer.FileConfig.Compress,
-		}
-		ws = append(ws, zapcore.AddSync(lw))
+		ws = append(ws, zapcore.AddSync(
+			&lumberjack.Logger{
+				Filename:   cfg.Writer.FileConfig.Filename,
+				MaxSize:    cfg.Writer.FileConfig.MaxSize,
+				MaxBackups: cfg.Writer.FileConfig.MaxBackups,
+				MaxAge:     cfg.Writer.FileConfig.MaxAge,
+				Compress:   cfg.Writer.FileConfig.Compress,
+			},
+		))
 	}
 
 	encCfg := zapcore.EncoderConfig{
@@ -41,7 +42,7 @@ func Zap(cfg Config) Logger {
 		MessageKey:     "message",
 		LineEnding:     zapcore.DefaultLineEnding,
 		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     zapcore.EpochTimeEncoder,
+		EncodeTime:     zapcore.RFC3339TimeEncoder,
 		EncodeDuration: zapcore.SecondsDurationEncoder,
 	}
 
