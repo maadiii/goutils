@@ -12,6 +12,7 @@ import (
 
 type zapLogger struct {
 	logger    *zap.Logger
+	service   string
 	ch        chan func()
 	done      chan struct{}
 	batchSize int
@@ -62,6 +63,7 @@ func Zap(cfg Config) Logger {
 		done:      make(chan struct{}),
 		batchSize: cfg.BatchSize,
 		batchDur:  cfg.BatchDur,
+		service:   cfg.ServiceName,
 	}
 
 	go zl.worker()
@@ -70,19 +72,39 @@ func Zap(cfg Config) Logger {
 }
 
 func (z *zapLogger) Debug(ctx context.Context, msg string, fields ...any) {
-	z.log(func() { z.logger.Sugar().Debugw(msg, fields...) })
+	z.log(
+		func() {
+			fields = append(fields, "service", z.service)
+			z.logger.Sugar().Debugw(msg, fields...)
+		},
+	)
 }
 
 func (z *zapLogger) Info(ctx context.Context, msg string, fields ...any) {
-	z.log(func() { z.logger.Sugar().Infow(msg, fields...) })
+	z.log(
+		func() {
+			fields = append(fields, "service", z.service)
+			z.logger.Sugar().Infow(msg, fields...)
+		},
+	)
 }
 
 func (z *zapLogger) Warn(ctx context.Context, msg string, fields ...any) {
-	z.log(func() { z.logger.Sugar().Warnw(msg, fields...) })
+	z.log(
+		func() {
+			fields = append(fields, "service", z.service)
+			z.logger.Sugar().Warnw(msg, fields...)
+		},
+	)
 }
 
 func (z *zapLogger) Error(ctx context.Context, msg string, fields ...any) {
-	z.log(func() { z.logger.Sugar().Errorw(msg, fields...) })
+	z.log(
+		func() {
+			fields = append(fields, "service", z.service)
+			z.logger.Sugar().Errorw(msg, fields...)
+		},
+	)
 }
 
 func (z *zapLogger) Sync() error {

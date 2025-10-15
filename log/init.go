@@ -16,11 +16,12 @@ type Logger interface {
 }
 
 type Config struct {
-	Level     Level
-	Writer    WriterConfig
-	QueueSize int
-	BatchSize int
-	BatchDur  time.Duration
+	ServiceName string
+	Level       Level
+	Writer      WriterConfig
+	QueueSize   int
+	BatchSize   int
+	BatchDur    time.Duration
 }
 
 type WriterConfig struct {
