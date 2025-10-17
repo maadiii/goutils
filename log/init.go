@@ -17,6 +17,7 @@ type Logger interface {
 
 type Config struct {
 	ServiceName string
+	Env         string
 	Level       Level
 	Writer      WriterConfig
 	QueueSize   int
