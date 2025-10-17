@@ -26,11 +26,10 @@ func HertzHandler(devMode bool) func(c context.Context, rc *app.RequestContext, 
 			_ = rc.Error(rc.AbortWithError(500, err))
 		}
 
+		errMsg := rc.Errors.Last().Error()
+		lines := strings.Split(errMsg, "\n")
+		errMsg = strings.ToLower(lines[0])
 		if devMode {
-			errMsg := rc.Errors.Last().Error()
-			lines := strings.Split(errMsg, "\n")
-			errMsg = lines[0]
-
 			stack := func() string {
 				if len(lines) > 1 {
 					return strings.Join(lines[1:], "\n")
@@ -40,6 +39,8 @@ func HertzHandler(devMode bool) func(c context.Context, rc *app.RequestContext, 
 			}()
 
 			rc.SetBodyString(errMsg + "\n" + stack)
+		} else {
+			rc.SetBodyString(errMsg)
 		}
 	}
 }
