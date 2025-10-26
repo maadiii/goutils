@@ -23,3 +23,12 @@ type Cache interface {
 	Get(ctx context.Context, key string) (value string, err error)
 	Del(ctx context.Context, keys ...string) (err error)
 }
+
+type Random interface {
+	String(length int) (string, error)
+}
+
+type Password interface {
+	Generate(plain string) (hash string, err error)
+	Compare(hash, plain string) bool
+}
