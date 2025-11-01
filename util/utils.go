@@ -13,3 +13,7 @@ func GetPtrValue[T any, P Pointer[T]](p P) T {
 
 	return *p
 }
+
+func ToPtr[T any](v T) *T {
+	return &v
+}
