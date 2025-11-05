@@ -117,7 +117,7 @@ func Gone() *Error {
 	return &Error{Type: http.StatusGone}
 }
 
-func StatusUnprocessableEntity() *Error {
+func UnprocessableEntity() *Error {
 	return &Error{Type: http.StatusUnprocessableEntity}
 }
 
