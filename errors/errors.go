@@ -117,6 +117,10 @@ func Gone() *Error {
 	return &Error{Type: http.StatusGone}
 }
 
+func StatusUnprocessableEntity() *Error {
+	return &Error{Type: http.StatusUnprocessableEntity}
+}
+
 func InternalServerError() *Error {
 	return &Error{Type: http.StatusInternalServerError}
 }
