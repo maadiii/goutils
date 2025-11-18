@@ -16,7 +16,7 @@ func Run() {
 
 	repoFactory := NewRepoFactory(db)
 	uow := uow.NewGorm(db, func(*gorm.DB) RepoFactory {
-		return repoFactory
+		return NewRepoFactory(db)
 	})
 
 	service := service{
