@@ -8,7 +8,7 @@ import (
 
 type service struct {
 	entities   EntityRepo
-	uowFactory uow.UoWFactory[RepoFactory]
+	uowFactory uow.Factory[RepoFactory]
 }
 
 func (s *service) Create(ctx context.Context) error {

@@ -13,7 +13,7 @@ type factory[RepoFactory any] struct {
 	gormFactory func(*gorm.DB) RepoFactory
 }
 
-func NewGorm[RepoFactory any](db *gorm.DB, constructor func(tx *gorm.DB) RepoFactory) *factory[RepoFactory] {
+func NewGorm[RepoFactory any](db *gorm.DB, constructor func(tx *gorm.DB) RepoFactory) Factory[RepoFactory] {
 	return &factory[RepoFactory]{
 		gormDb:      db,
 		gormFactory: constructor,

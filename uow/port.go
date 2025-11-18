@@ -5,7 +5,7 @@ import (
 	"database/sql"
 )
 
-type UoWFactory[RepoFactory any] interface {
+type Factory[RepoFactory any] interface {
 	UoW() UoW[RepoFactory]
 }
 
