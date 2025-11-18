@@ -8,19 +8,19 @@ import (
 	"gorm.io/gorm"
 )
 
-type uowFactory[RepoFactory any] struct {
+type factory[RepoFactory any] struct {
 	gormDb      *gorm.DB
 	gormFactory func(*gorm.DB) RepoFactory
 }
 
-func NewGorm[RepoFactory any](db *gorm.DB, constructor func(*gorm.DB) RepoFactory) *uowFactory[RepoFactory] {
-	return &uowFactory[RepoFactory]{
+func NewGorm[RepoFactory any](db *gorm.DB, constructor func(*gorm.DB) RepoFactory) *factory[RepoFactory] {
+	return &factory[RepoFactory]{
 		gormDb:      db,
 		gormFactory: constructor,
 	}
 }
 
-func (u *uowFactory[T]) Tx() UoW[T] {
+func (u *factory[T]) UoW() UoW[T] {
 	return &uow[T]{
 		db:          u.gormDb,
 		gormFactory: u.gormFactory,

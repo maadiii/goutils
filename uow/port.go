@@ -6,7 +6,7 @@ import (
 )
 
 type UoWFactory[RepoFactory any] interface {
-	Tx() UoW[RepoFactory]
+	UoW() UoW[RepoFactory]
 }
 
 type UoW[RepoFactory any] interface {

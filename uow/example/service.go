@@ -18,7 +18,7 @@ func (s *service) Create(ctx context.Context) error {
 		return err
 	}
 
-	uow := s.uowFactory.Tx()
+	uow := s.uowFactory.UoW()
 	err := uow.Do(ctx, func(ctx context.Context, repo RepoFactory) error {
 		return repo.Entity().Insert(ctx, entity)
 	})
