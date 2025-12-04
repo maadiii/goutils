@@ -80,6 +80,8 @@ func (blockingJob) RetryDelay() time.Duration { return 0 }
 // ---------------------- Tests ----------------------
 
 func TestWorkerPool_Basic(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	pool := NewWorkerPool[int](ctx, DefaultWorkerPoolConfig())
 	defer pool.Close(false)
@@ -99,6 +101,8 @@ func TestWorkerPool_Basic(t *testing.T) {
 }
 
 func TestWorkerPool_Concurrency(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	pool := NewWorkerPool[int](ctx, DefaultWorkerPoolConfig())
 	defer pool.Close(false)
@@ -121,6 +125,8 @@ func TestWorkerPool_Concurrency(t *testing.T) {
 }
 
 func TestWorkerPool_Retry(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	pool := NewWorkerPool[int](ctx, DefaultWorkerPoolConfig())
 	defer pool.Close(false)
@@ -138,6 +144,8 @@ func TestWorkerPool_Retry(t *testing.T) {
 }
 
 func TestWorkerPool_Timeout(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	cfg := DefaultWorkerPoolConfig()
 	cfg.JobProcessTimeout = 10 * time.Millisecond
@@ -153,6 +161,8 @@ func TestWorkerPool_Timeout(t *testing.T) {
 }
 
 func TestWorkerPool_PanicSafety(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	pool := NewWorkerPool[int](ctx, DefaultWorkerPoolConfig())
 	defer pool.Close(false)
@@ -169,6 +179,8 @@ func TestWorkerPool_PanicSafety(t *testing.T) {
 }
 
 func TestWorkerPool_GracefulShutdown(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	cfg := DefaultWorkerPoolConfig()
 	cfg.NumWorkers = 2
@@ -209,6 +221,8 @@ func (b *blockingJobWithCtx) MaxRetries() int           { return 0 }
 func (b *blockingJobWithCtx) RetryDelay() time.Duration { return 0 }
 
 func TestWorkerPool_ForceShutdown_Safe(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	cfg := DefaultWorkerPoolConfig()
 	cfg.NumWorkers = 2
@@ -233,6 +247,8 @@ func TestWorkerPool_ForceShutdown_Safe(t *testing.T) {
 }
 
 func TestWorkerPool_PendingCounters(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	cfg := DefaultWorkerPoolConfig()
 	cfg.NumWorkers = 1
@@ -257,6 +273,8 @@ func TestWorkerPool_PendingCounters(t *testing.T) {
 }
 
 func TestWorkerPool_SubmitAfterClose(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	pool := NewWorkerPool[int](ctx, DefaultWorkerPoolConfig())
 	pool.Close(false)
