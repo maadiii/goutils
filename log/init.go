@@ -4,16 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/maadiii/utils"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
-
-type Logger interface {
-	Debug(ctx context.Context, msg string, fields ...any)
-	Info(ctx context.Context, msg string, fields ...any)
-	Warn(ctx context.Context, msg string, fields ...any)
-	Error(ctx context.Context, msg string, fields ...any)
-	Sync() error
-}
 
 type Config struct {
 	ServiceName string
@@ -45,10 +38,10 @@ const (
 
 type loggerKey struct{}
 
-func WithContext(ctx context.Context, logger Logger) context.Context {
+func WithContext(ctx context.Context, logger utils.Logger) context.Context {
 	return context.WithValue(ctx, loggerKey{}, logger)
 }
 
-func FromContext(ctx context.Context) Logger {
-	return ctx.Value(loggerKey{}).(Logger)
+func FromContext(ctx context.Context) utils.Logger {
+	return ctx.Value(loggerKey{}).(utils.Logger)
 }
