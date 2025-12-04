@@ -1,4 +1,4 @@
-package workerpool_test
+package workerpool
 
 import (
 	"context"
@@ -6,8 +6,6 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-
-	wp "workerpool"
 )
 
 // ---------------------- Simple Job ----------------------
@@ -83,7 +81,7 @@ func (blockingJob) RetryDelay() time.Duration { return 0 }
 
 func TestWorkerPool_Basic(t *testing.T) {
 	ctx := context.Background()
-	pool := wp.NewWorkerPool[int](ctx, wp.DefaultWorkerPoolConfig())
+	pool := NewWorkerPool[int](ctx, DefaultWorkerPoolConfig())
 	defer pool.Close(false)
 
 	job := simpleJob{id: 42}
@@ -102,7 +100,7 @@ func TestWorkerPool_Basic(t *testing.T) {
 
 func TestWorkerPool_Concurrency(t *testing.T) {
 	ctx := context.Background()
-	pool := wp.NewWorkerPool[int](ctx, wp.DefaultWorkerPoolConfig())
+	pool := NewWorkerPool[int](ctx, DefaultWorkerPoolConfig())
 	defer pool.Close(false)
 
 	const jobs = 50
@@ -124,7 +122,7 @@ func TestWorkerPool_Concurrency(t *testing.T) {
 
 func TestWorkerPool_Retry(t *testing.T) {
 	ctx := context.Background()
-	pool := wp.NewWorkerPool[int](ctx, wp.DefaultWorkerPoolConfig())
+	pool := NewWorkerPool[int](ctx, DefaultWorkerPoolConfig())
 	defer pool.Close(false)
 
 	job := &retryJob{id: 7}
@@ -141,9 +139,9 @@ func TestWorkerPool_Retry(t *testing.T) {
 
 func TestWorkerPool_Timeout(t *testing.T) {
 	ctx := context.Background()
-	cfg := wp.DefaultWorkerPoolConfig()
+	cfg := DefaultWorkerPoolConfig()
 	cfg.JobProcessTimeout = 10 * time.Millisecond
-	pool := wp.NewWorkerPool[int](ctx, cfg)
+	pool := NewWorkerPool[int](ctx, cfg)
 	defer pool.Close(false)
 
 	_ = pool.Submit(timeoutJob{})
@@ -156,7 +154,7 @@ func TestWorkerPool_Timeout(t *testing.T) {
 
 func TestWorkerPool_PanicSafety(t *testing.T) {
 	ctx := context.Background()
-	pool := wp.NewWorkerPool[int](ctx, wp.DefaultWorkerPoolConfig())
+	pool := NewWorkerPool[int](ctx, DefaultWorkerPoolConfig())
 	defer pool.Close(false)
 
 	_ = pool.Submit(panicJob{id: 99})
@@ -172,9 +170,9 @@ func TestWorkerPool_PanicSafety(t *testing.T) {
 
 func TestWorkerPool_GracefulShutdown(t *testing.T) {
 	ctx := context.Background()
-	cfg := wp.DefaultWorkerPoolConfig()
+	cfg := DefaultWorkerPoolConfig()
 	cfg.NumWorkers = 2
-	pool := wp.NewWorkerPool[int](ctx, cfg)
+	pool := NewWorkerPool[int](ctx, cfg)
 
 	const jobs = 10
 	for i := range jobs {
@@ -212,10 +210,10 @@ func (b *blockingJobWithCtx) RetryDelay() time.Duration { return 0 }
 
 func TestWorkerPool_ForceShutdown_Safe(t *testing.T) {
 	ctx := context.Background()
-	cfg := wp.DefaultWorkerPoolConfig()
+	cfg := DefaultWorkerPoolConfig()
 	cfg.NumWorkers = 2
 	cfg.ResultQueueSize = 10
-	pool := wp.NewWorkerPool[int](ctx, cfg)
+	pool := NewWorkerPool[int](ctx, cfg)
 
 	for i := range 5 {
 		_ = pool.Submit(&blockingJobWithCtx{id: i})
@@ -236,9 +234,9 @@ func TestWorkerPool_ForceShutdown_Safe(t *testing.T) {
 
 func TestWorkerPool_PendingCounters(t *testing.T) {
 	ctx := context.Background()
-	cfg := wp.DefaultWorkerPoolConfig()
+	cfg := DefaultWorkerPoolConfig()
 	cfg.NumWorkers = 1
-	pool := wp.NewWorkerPool[int](ctx, cfg)
+	pool := NewWorkerPool[int](ctx, cfg)
 	defer pool.Close(false)
 
 	blocker := make(chan struct{}, 5)
@@ -260,11 +258,11 @@ func TestWorkerPool_PendingCounters(t *testing.T) {
 
 func TestWorkerPool_SubmitAfterClose(t *testing.T) {
 	ctx := context.Background()
-	pool := wp.NewWorkerPool[int](ctx, wp.DefaultWorkerPoolConfig())
+	pool := NewWorkerPool[int](ctx, DefaultWorkerPoolConfig())
 	pool.Close(false)
 
 	err := pool.Submit(simpleJob{id: 1})
-	if err != wp.ErrClosedWorkerPool {
+	if err != ErrClosedWorkerPool {
 		t.Fatalf("expected ErrClosedWorkerPool, got %v", err)
 	}
 }
