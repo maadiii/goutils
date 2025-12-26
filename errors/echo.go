@@ -14,15 +14,17 @@ func EchoHandler(devMode bool) func(err error, c echo.Context) {
 		case Error:
 		case *Error:
 			if e.Type != 0 {
-				c.Error(c.NoContent(e.Type))
+				_ = c.NoContent(e.Type)
 			} else {
-				c.Error(c.NoContent(http.StatusInternalServerError))
+				_ = c.NoContent(http.StatusInternalServerError)
 			}
 		case validator.ValidationErrors:
 		case *validator.InvalidValidationError:
-			c.Error(c.NoContent(http.StatusBadRequest))
+			_ = c.NoContent(http.StatusBadRequest)
+		case *echo.HTTPError:
+			_ = c.NoContent(e.Code)
 		default:
-			c.Error(c.NoContent(http.StatusInternalServerError))
+			_ = c.NoContent(http.StatusInternalServerError)
 		}
 
 		errMsg := err.Error()
@@ -38,10 +40,14 @@ func EchoHandler(devMode bool) func(err error, c echo.Context) {
 			}()
 
 			_, err = c.Response().Write([]byte(errMsg + "\n" + stack))
-			c.Error(err)
+			if err != nil {
+				c.Error(err)
+			}
 		} else {
 			_, err = c.Response().Write([]byte(errMsg))
-			c.Error(err)
+			if err != nil {
+				c.Error(err)
+			}
 		}
 	}
 }
