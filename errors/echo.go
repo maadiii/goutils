@@ -41,12 +41,7 @@ func EchoHandler(devMode bool) func(err error, c echo.Context) {
 
 			_, err = c.Response().Write([]byte(errMsg + "\n" + stack))
 			if err != nil {
-				c.Error(err)
-			}
-		} else {
-			_, err = c.Response().Write([]byte(errMsg))
-			if err != nil {
-				c.Error(err)
+				panic(err)
 			}
 		}
 	}
