@@ -22,7 +22,7 @@ func HandleEchoPanic(devMode bool) echo.MiddlewareFunc {
 			defer func() {
 				if r := recover(); r != nil {
 					err = fmt.Errorf("%v\n%s", r, string(debug.Stack()))
-					handleError(false, err, c)
+					handleError(devMode, err, c)
 				}
 			}()
 
