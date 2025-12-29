@@ -88,8 +88,8 @@ func TestExpiryIsEnforced(t *testing.T) {
 		Issuer:     "issuer",
 		AccessKey:  ak,
 		RefreshKey: rk,
-		AccessTTL:  50 * time.Millisecond,
-		RefreshTTL: time.Second,
+		AccessTTL:  100 * time.Millisecond,
+		RefreshTTL: 2 * time.Second,
 	})
 	if err != nil {
 		t.Fatalf("NewLocalPaseto error: %v", err)
@@ -100,7 +100,7 @@ func TestExpiryIsEnforced(t *testing.T) {
 		t.Fatalf("Generate error: %v", err)
 	}
 
-	time.Sleep(80 * time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
 	if _, err := p.ValidateAccess(toks.Access); err == nil {
 		t.Fatalf("expected access token to expire")
 	}
