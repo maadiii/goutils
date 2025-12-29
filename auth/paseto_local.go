@@ -19,14 +19,15 @@ const (
 
 // LocalClaims captures the essential claims we expose to callers.
 type LocalClaims struct {
-	Subject   string
-	Audience  string
-	Issuer    string
-	JTI       string
-	ExpiresAt time.Time
-	IssuedAt  time.Time
-	NotBefore time.Time
-	TokenType LocalTokenType
+	Subject      string
+	Audience     string
+	Issuer       string
+	JTI          string
+	ExpiresAt    time.Time
+	IssuedAt     time.Time
+	NotBefore    time.Time
+	TokenType    LocalTokenType
+	CustomClaims map[string]interface{}
 }
 
 // LocalPasetoConfig holds configuration for PASETO v4 local token generation.
@@ -79,12 +80,13 @@ type Tokens struct {
 }
 
 // Generate issues a new pair of access and refresh tokens for the given subject and audience.
-func (p *LocalPaseto) Generate(subject, audience string) (Tokens, error) {
-	access, err := p.makeToken(subject, audience, AccessToken, p.accessTTL, p.accessKey)
+// customClaims is an optional map of additional claims to include in both tokens.
+func (p *LocalPaseto) Generate(subject, audience string, customClaims map[string]interface{}) (Tokens, error) {
+	access, err := p.makeToken(subject, audience, AccessToken, p.accessTTL, p.accessKey, customClaims)
 	if err != nil {
 		return Tokens{}, err
 	}
-	refresh, err := p.makeToken(subject, audience, RefreshToken, p.refreshTTL, p.refreshKey)
+	refresh, err := p.makeToken(subject, audience, RefreshToken, p.refreshTTL, p.refreshKey, customClaims)
 	if err != nil {
 		return Tokens{}, err
 	}
@@ -101,7 +103,7 @@ func (p *LocalPaseto) ValidateRefresh(token string) (LocalClaims, error) {
 	return p.parse(token, RefreshToken, p.refreshKey)
 }
 
-func (p *LocalPaseto) makeToken(subject, audience string, typ LocalTokenType, ttl time.Duration, key psto.V4SymmetricKey) (string, error) {
+func (p *LocalPaseto) makeToken(subject, audience string, typ LocalTokenType, ttl time.Duration, key psto.V4SymmetricKey, customClaims map[string]interface{}) (string, error) {
 	now := time.Now().UTC()
 	exp := now.Add(ttl)
 
@@ -114,6 +116,11 @@ func (p *LocalPaseto) makeToken(subject, audience string, typ LocalTokenType, tt
 	tok.SetExpiration(exp)
 	tok.SetJti(newJTI())
 	_ = tok.Set("typ", string(typ))
+
+	// Add custom claims
+	for key, value := range customClaims {
+		_ = tok.Set(key, value)
+	}
 
 	return tok.V4Encrypt(key, nil), nil
 }
@@ -143,15 +150,30 @@ func (p *LocalPaseto) parse(token string, expected LocalTokenType, key psto.V4Sy
 	issuedAt, _ := value.GetIssuedAt()
 	nbf, _ := value.GetNotBefore()
 
+	// Extract custom claims
+	allClaims := value.Claims()
+	customClaims := make(map[string]interface{})
+	reservedKeys := map[string]bool{
+		"sub": true, "aud": true, "iss": true, "jti": true,
+		"exp": true, "iat": true, "nbf": true, "typ": true,
+	}
+
+	for key, val := range allClaims {
+		if !reservedKeys[key] {
+			customClaims[key] = val
+		}
+	}
+
 	return LocalClaims{
-		Subject:   sub,
-		Audience:  aud,
-		Issuer:    iss,
-		JTI:       jit,
-		ExpiresAt: exp,
-		IssuedAt:  issuedAt,
-		NotBefore: nbf,
-		TokenType: expected,
+		Subject:      sub,
+		Audience:     aud,
+		Issuer:       iss,
+		JTI:          jit,
+		ExpiresAt:    exp,
+		IssuedAt:     issuedAt,
+		NotBefore:    nbf,
+		TokenType:    expected,
+		CustomClaims: customClaims,
 	}, nil
 }
 
