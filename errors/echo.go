@@ -16,16 +16,18 @@ func EchoHandler(devMode bool) func(err error, c echo.Context) {
 	}
 }
 
-func HandleEchoPanic(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) (err error) {
-		defer func() {
-			if r := recover(); r != nil {
-				err = fmt.Errorf("%v\n%s", r, string(debug.Stack()))
-				handleError(false, err, c)
-			}
-		}()
+func HandleEchoPanic(devMode bool) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) (err error) {
+			defer func() {
+				if r := recover(); r != nil {
+					err = fmt.Errorf("%v\n%s", r, string(debug.Stack()))
+					handleError(false, err, c)
+				}
+			}()
 
-		return next(c)
+			return next(c)
+		}
 	}
 }
 
