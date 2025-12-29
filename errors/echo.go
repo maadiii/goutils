@@ -18,10 +18,10 @@ func EchoHandler(devMode bool) func(err error, c echo.Context) {
 
 func HandleEchoPanic(devMode bool) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) (err error) {
+		return func(c echo.Context) error {
 			defer func() {
 				if r := recover(); r != nil {
-					err = fmt.Errorf("%v\n%s", r, string(debug.Stack()))
+					err := fmt.Errorf("%v\n%s", r, string(debug.Stack()))
 					handleError(devMode, err, c)
 				}
 			}()
@@ -52,18 +52,19 @@ func handleError(devMode bool, err error, c echo.Context) {
 	errMsg := err.Error()
 	lines := strings.Split(errMsg, "\n")
 	errMsg = strings.ToLower(lines[0])
-	if devMode {
-		stack := func() string {
-			if len(lines) > 1 {
-				return strings.Join(lines[1:], "\n")
-			}
-
-			return ""
-		}()
-
-		_, err = c.Response().Write([]byte(errMsg + "\n" + stack))
-		if err != nil {
-			panic(err)
+	stack := func() string {
+		if len(lines) > 1 {
+			return strings.Join(lines[1:], "\n")
 		}
+
+		return ""
+	}()
+	final := errMsg + "\n" + stack
+	c.Echo().Logger.Error(final)
+
+	if devMode {
+		_, _ = c.Response().Write([]byte(final))
+	} else {
+		_, _ = c.Response().Write([]byte(errMsg))
 	}
 }

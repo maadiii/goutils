@@ -1,7 +1,6 @@
 package log
 
 import (
-	"context"
 	"os"
 	"time"
 
@@ -74,7 +73,7 @@ func Zap(cfg Config) utils.Logger {
 	return zl
 }
 
-func (z *zapLogger) Debug(ctx context.Context, msg string, fields ...any) {
+func (z *zapLogger) Debug(msg string, fields ...any) {
 	z.log(
 		func() {
 			fields = append(fields, "service", z.service, "env", z.env)
@@ -83,7 +82,7 @@ func (z *zapLogger) Debug(ctx context.Context, msg string, fields ...any) {
 	)
 }
 
-func (z *zapLogger) Info(ctx context.Context, msg string, fields ...any) {
+func (z *zapLogger) Info(msg string, fields ...any) {
 	z.log(
 		func() {
 			fields = append(fields, "service", z.service, "env", z.env)
@@ -92,7 +91,7 @@ func (z *zapLogger) Info(ctx context.Context, msg string, fields ...any) {
 	)
 }
 
-func (z *zapLogger) Warn(ctx context.Context, msg string, fields ...any) {
+func (z *zapLogger) Warn(msg string, fields ...any) {
 	z.log(
 		func() {
 			fields = append(fields, "service", z.service, "env", z.env)
@@ -101,7 +100,7 @@ func (z *zapLogger) Warn(ctx context.Context, msg string, fields ...any) {
 	)
 }
 
-func (z *zapLogger) Error(ctx context.Context, msg string, fields ...any) {
+func (z *zapLogger) Error(msg string, fields ...any) {
 	z.log(
 		func() {
 			fields = append(fields, "service", z.service, "env", z.env)

@@ -10,19 +10,19 @@ type spyLogger struct {
 	calls []string
 }
 
-func (s *spyLogger) Debug(ctx context.Context, msg string, fields ...any) {
+func (s *spyLogger) Debug(msg string, fields ...any) {
 	s.calls = append(s.calls, "debug:"+msg)
 }
 
-func (s *spyLogger) Info(ctx context.Context, msg string, fields ...any) {
+func (s *spyLogger) Info(msg string, fields ...any) {
 	s.calls = append(s.calls, "info:"+msg)
 }
 
-func (s *spyLogger) Warn(ctx context.Context, msg string, fields ...any) {
+func (s *spyLogger) Warn(msg string, fields ...any) {
 	s.calls = append(s.calls, "warn:"+msg)
 }
 
-func (s *spyLogger) Error(ctx context.Context, msg string, fields ...any) {
+func (s *spyLogger) Error(msg string, fields ...any) {
 	s.calls = append(s.calls, "error:"+msg)
 }
 func (s *spyLogger) Sync() error { return nil }
@@ -46,7 +46,7 @@ func TestWithContext_FromContext(t *testing.T) {
 	}
 
 	// verify it implements utils.Logger by calling a method
-	got.Info(context.Background(), "test-msg", "k", "v")
+	got.Info("test-msg", "k", "v")
 
 	// type assert to our spy to inspect calls
 	if sp, ok := got.(*spyLogger); ok {
@@ -62,7 +62,7 @@ func TestZapLogger_BasicLoggingAndSync(t *testing.T) {
 		Env:         "test",
 		Level:       DebugLevel,
 		Writer: WriterConfig{
-			Stdout: true,
+			Stdout: false,
 		},
 		QueueSize: 10,
 		BatchSize: 2,
@@ -72,10 +72,10 @@ func TestZapLogger_BasicLoggingAndSync(t *testing.T) {
 	l := Zap(cfg)
 
 	// basic calls shouldn't panic
-	l.Debug(context.Background(), "dmsg", "k", "v")
-	l.Info(context.Background(), "imsg", "k", "v")
-	l.Warn(context.Background(), "wmsg", "k", "v")
-	l.Error(context.Background(), "emsg", "k", "v")
+	l.Debug("dmsg", "k", "v")
+	l.Info("imsg", "k", "v")
+	l.Warn("wmsg", "k", "v")
+	l.Error("emsg", "k", "v")
 
 	// allow worker to process
 	time.Sleep(100 * time.Millisecond)
@@ -91,7 +91,7 @@ func TestZapLogger_DropWhenQueueFull(t *testing.T) {
 		Env:         "test",
 		Level:       DebugLevel,
 		Writer: WriterConfig{
-			Stdout: true,
+			Stdout: false,
 		},
 		QueueSize: 1,
 		BatchSize: 1000,
@@ -102,7 +102,7 @@ func TestZapLogger_DropWhenQueueFull(t *testing.T) {
 
 	// fill queue quickly with more messages than capacity
 	for i := range 10 {
-		l.Info(context.Background(), "msg", "i", i)
+		l.Info("msg", "i", i)
 	}
 
 	// give some time and then sync

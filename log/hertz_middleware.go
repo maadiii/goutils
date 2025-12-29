@@ -43,7 +43,6 @@ func logRequest(c context.Context, ctx *app.RequestContext, logger utils.Logger)
 
 	if ctx.Response.StatusCode() < 400 {
 		logger.Info(
-			c,
 			"success api call",
 			"route", string(ctx.URI().Path()),
 			"method", string(ctx.Method()),
@@ -61,7 +60,6 @@ func logRequest(c context.Context, ctx *app.RequestContext, logger utils.Logger)
 
 		msg, stack := stack(ctx)
 		logger.Error(
-			c,
 			msg,
 			"route", string(ctx.URI().Path()),
 			"method", string(ctx.Method()),
@@ -76,7 +74,6 @@ func logRequest(c context.Context, ctx *app.RequestContext, logger utils.Logger)
 	if ctx.Response.StatusCode() >= 500 {
 		msg, stack := stack(ctx)
 		logger.Error(
-			c,
 			msg,
 			"route", string(ctx.URI().Path()),
 			"method", string(ctx.Method()),
