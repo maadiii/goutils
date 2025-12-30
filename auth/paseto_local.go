@@ -9,6 +9,11 @@ import (
 	psto "aidanwoods.dev/go-paseto"
 )
 
+// test hook for PASETO v4 local encryption
+var pasetoV4Encrypt = func(tok psto.Token, key psto.V4SymmetricKey) (string, error) {
+	return tok.V4Encrypt(key, nil), nil
+}
+
 // LocalTokenType distinguishes access vs refresh tokens.
 type LocalTokenType string
 
@@ -50,16 +55,18 @@ type LocalPaseto struct {
 
 // NewLocalPaseto builds a LocalPaseto with distinct keys and TTLs for access and refresh tokens.
 // Both keys must be 32 bytes for PASETO v4 local.
+var v4SymmetricKeyFromBytes = psto.V4SymmetricKeyFromBytes
+
 func NewLocalPaseto(cfg LocalPasetoConfig) (*LocalPaseto, error) {
 	if len(cfg.AccessKey) != 32 || len(cfg.RefreshKey) != 32 {
 		return nil, errors.New("paseto keys must be 32 bytes for v4 local")
 	}
 
-	ak, err := psto.V4SymmetricKeyFromBytes(cfg.AccessKey)
+	ak, err := v4SymmetricKeyFromBytes(cfg.AccessKey)
 	if err != nil {
 		return nil, err
 	}
-	rk, err := psto.V4SymmetricKeyFromBytes(cfg.RefreshKey)
+	rk, err := v4SymmetricKeyFromBytes(cfg.RefreshKey)
 	if err != nil {
 		return nil, err
 	}
@@ -122,42 +129,41 @@ func (p *LocalPaseto) makeToken(subject, audience string, typ LocalTokenType, tt
 		_ = tok.Set(key, value)
 	}
 
-	return tok.V4Encrypt(key, nil), nil
+	return pasetoV4Encrypt(tok, key)
 }
 
 func (p *LocalPaseto) parse(token string, expected LocalTokenType, key psto.V4SymmetricKey) (LocalClaims, error) {
-	parser := psto.NewParser()
-	value, err := parser.ParseV4Local(key, token, nil)
+	value, err := parseV4LocalFunc(key, token)
 	if err != nil {
 		return LocalClaims{}, err
 	}
-
-	typ := ""
-	_ = value.Get("typ", &typ)
-	if typ != string(expected) {
-		return LocalClaims{}, errors.New("paseto: unexpected token type")
+	if err := validateLocalToken(value, expected); err != nil {
+		return LocalClaims{}, err
 	}
+	return buildLocalClaims(value, expected), nil
+}
 
-	exp, _ := value.GetExpiration()
-	if time.Now().UTC().After(exp) {
-		return LocalClaims{}, errors.New("paseto: token expired")
-	}
+// test hook for parsing v4 local PASETO tokens
+var parseV4LocalFunc = func(key psto.V4SymmetricKey, token string) (*psto.Token, error) {
+	parser := psto.NewParser()
+	return parser.ParseV4Local(key, token, nil)
+}
 
+func buildLocalClaims(value *psto.Token, expected LocalTokenType) LocalClaims {
 	sub, _ := value.GetSubject()
 	aud, _ := value.GetAudience()
 	iss, _ := value.GetIssuer()
 	jit, _ := value.GetJti()
 	issuedAt, _ := value.GetIssuedAt()
 	nbf, _ := value.GetNotBefore()
+	exp, _ := value.GetExpiration()
 
-	// Extract custom claims
 	allClaims := value.Claims()
 	customClaims := make(map[string]interface{})
 	reservedKeys := map[string]bool{
 		"sub": true, "aud": true, "iss": true, "jti": true,
 		"exp": true, "iat": true, "nbf": true, "typ": true,
 	}
-
 	for key, val := range allClaims {
 		if !reservedKeys[key] {
 			customClaims[key] = val
@@ -174,7 +180,20 @@ func (p *LocalPaseto) parse(token string, expected LocalTokenType, key psto.V4Sy
 		NotBefore:    nbf,
 		TokenType:    expected,
 		CustomClaims: customClaims,
-	}, nil
+	}
+}
+
+func validateLocalToken(value *psto.Token, expected LocalTokenType) error {
+	typ := ""
+	_ = value.Get("typ", &typ)
+	if typ != string(expected) {
+		return errors.New("paseto: unexpected token type")
+	}
+	exp, _ := value.GetExpiration()
+	if time.Now().UTC().After(exp) {
+		return errors.New("paseto: token expired")
+	}
+	return nil
 }
 
 func newJTI() string {

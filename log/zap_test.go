@@ -111,3 +111,54 @@ func TestZapLogger_DropWhenQueueFull(t *testing.T) {
 		t.Fatalf("Sync returned error after overflow: %v", err)
 	}
 }
+
+func TestZapLogger_TimerFlushBatch(t *testing.T) {
+	// Test that timer flushes batches even when batch size not reached
+	cfg := Config{
+		ServiceName: "timer-test",
+		Env:         "test",
+		Level:       DebugLevel,
+		Writer: WriterConfig{
+			Stdout: false,
+		},
+		QueueSize: 10,
+		BatchSize: 100, // large batch size
+		BatchDur:  50 * time.Millisecond,
+	}
+
+	l := Zap(cfg)
+
+	// send fewer messages than batch size
+	l.Info("msg1")
+	l.Info("msg2")
+
+	// wait for timer to trigger flush
+	time.Sleep(100 * time.Millisecond)
+
+	if err := l.Sync(); err != nil {
+		t.Fatalf("Sync returned error: %v", err)
+	}
+}
+
+func TestZap_InvalidLevel(t *testing.T) {
+	// Test panic on invalid log level
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("Expected panic for invalid level")
+		}
+	}()
+	
+	cfg := Config{
+		ServiceName: "test",
+		Env:         "test",
+		Level:       Level("invalid-level"),
+		Writer: WriterConfig{
+			Stdout: false,
+		},
+		QueueSize: 10,
+		BatchSize: 5,
+		BatchDur:  100 * time.Millisecond,
+	}
+	
+	_ = Zap(cfg)
+}

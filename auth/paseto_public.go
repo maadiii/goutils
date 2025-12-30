@@ -9,6 +9,11 @@ import (
 	psto "aidanwoods.dev/go-paseto"
 )
 
+// test hook for PASETO v4 public signing
+var pasetoV4Sign = func(tok psto.Token, key psto.V4AsymmetricSecretKey) (string, error) {
+	return tok.V4Sign(key, nil), nil
+}
+
 // PublicTokenType distinguishes access vs refresh tokens for public PASETO.
 type PublicTokenType string
 
@@ -32,28 +37,33 @@ type PublicClaims struct {
 
 // PublicPasetoConfig holds configuration for PASETO v4 public token generation.
 type PublicPasetoConfig struct {
-	Issuer           string
-	AccessPrivateKey []byte
-	AccessPublicKey  []byte
+	Issuer            string
+	AccessPrivateKey  []byte
+	AccessPublicKey   []byte
 	RefreshPrivateKey []byte
 	RefreshPublicKey  []byte
-	AccessTTL        time.Duration
-	RefreshTTL       time.Duration
+	AccessTTL         time.Duration
+	RefreshTTL        time.Duration
 }
 
 // PublicPaseto generates and validates PASETO v4 public tokens for access/refresh.
 type PublicPaseto struct {
-	issuer             string
-	accessPrivateKey   psto.V4AsymmetricSecretKey
-	accessPublicKey    psto.V4AsymmetricPublicKey
-	refreshPrivateKey  psto.V4AsymmetricSecretKey
-	refreshPublicKey   psto.V4AsymmetricPublicKey
-	accessTTL          time.Duration
-	refreshTTL         time.Duration
+	issuer            string
+	accessPrivateKey  psto.V4AsymmetricSecretKey
+	accessPublicKey   psto.V4AsymmetricPublicKey
+	refreshPrivateKey psto.V4AsymmetricSecretKey
+	refreshPublicKey  psto.V4AsymmetricPublicKey
+	accessTTL         time.Duration
+	refreshTTL        time.Duration
 }
 
 // NewPublicPaseto builds a PublicPaseto with distinct key pairs and TTLs for access and refresh tokens.
 // Private keys must be 64 bytes and public keys must be 32 bytes for PASETO v4 public.
+var (
+	newV4AsymmetricSecretKeyFromBytes = psto.NewV4AsymmetricSecretKeyFromBytes
+	newV4AsymmetricPublicKeyFromBytes = psto.NewV4AsymmetricPublicKeyFromBytes
+)
+
 func NewPublicPaseto(cfg PublicPasetoConfig) (*PublicPaseto, error) {
 	if len(cfg.AccessPrivateKey) != 64 || len(cfg.RefreshPrivateKey) != 64 {
 		return nil, errors.New("paseto private keys must be 64 bytes for v4 public")
@@ -62,20 +72,20 @@ func NewPublicPaseto(cfg PublicPasetoConfig) (*PublicPaseto, error) {
 		return nil, errors.New("paseto public keys must be 32 bytes for v4 public")
 	}
 
-	aPvt, err := psto.NewV4AsymmetricSecretKeyFromBytes(cfg.AccessPrivateKey)
+	aPvt, err := newV4AsymmetricSecretKeyFromBytes(cfg.AccessPrivateKey)
 	if err != nil {
 		return nil, err
 	}
-	aPub, err := psto.NewV4AsymmetricPublicKeyFromBytes(cfg.AccessPublicKey)
+	aPub, err := newV4AsymmetricPublicKeyFromBytes(cfg.AccessPublicKey)
 	if err != nil {
 		return nil, err
 	}
 
-	rPvt, err := psto.NewV4AsymmetricSecretKeyFromBytes(cfg.RefreshPrivateKey)
+	rPvt, err := newV4AsymmetricSecretKeyFromBytes(cfg.RefreshPrivateKey)
 	if err != nil {
 		return nil, err
 	}
-	rPub, err := psto.NewV4AsymmetricPublicKeyFromBytes(cfg.RefreshPublicKey)
+	rPub, err := newV4AsymmetricPublicKeyFromBytes(cfg.RefreshPublicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -140,42 +150,41 @@ func (p *PublicPaseto) makeToken(subject, audience string, typ PublicTokenType, 
 		_ = tok.Set(key, value)
 	}
 
-	return tok.V4Sign(key, nil), nil
+	return pasetoV4Sign(tok, key)
 }
 
 func (p *PublicPaseto) parse(token string, expected PublicTokenType, key psto.V4AsymmetricPublicKey) (PublicClaims, error) {
-	parser := psto.NewParser()
-	value, err := parser.ParseV4Public(key, token, nil)
+	value, err := parseV4PublicFunc(key, token)
 	if err != nil {
 		return PublicClaims{}, err
 	}
-
-	typ := ""
-	_ = value.Get("typ", &typ)
-	if typ != string(expected) {
-		return PublicClaims{}, errors.New("paseto: unexpected token type")
+	if err := validatePublicToken(value, expected); err != nil {
+		return PublicClaims{}, err
 	}
+	return buildPublicClaims(value, expected), nil
+}
 
-	exp, _ := value.GetExpiration()
-	if time.Now().UTC().After(exp) {
-		return PublicClaims{}, errors.New("paseto: token expired")
-	}
+// test hook for parsing v4 public PASETO tokens
+var parseV4PublicFunc = func(key psto.V4AsymmetricPublicKey, token string) (*psto.Token, error) {
+	parser := psto.NewParser()
+	return parser.ParseV4Public(key, token, nil)
+}
 
+func buildPublicClaims(value *psto.Token, expected PublicTokenType) PublicClaims {
 	sub, _ := value.GetSubject()
 	aud, _ := value.GetAudience()
 	iss, _ := value.GetIssuer()
 	jit, _ := value.GetJti()
 	issuedAt, _ := value.GetIssuedAt()
 	nbf, _ := value.GetNotBefore()
+	exp, _ := value.GetExpiration()
 
-	// Extract custom claims
 	allClaims := value.Claims()
 	customClaims := make(map[string]interface{})
 	reservedKeys := map[string]bool{
 		"sub": true, "aud": true, "iss": true, "jti": true,
 		"exp": true, "iat": true, "nbf": true, "typ": true,
 	}
-
 	for key, val := range allClaims {
 		if !reservedKeys[key] {
 			customClaims[key] = val
@@ -192,7 +201,20 @@ func (p *PublicPaseto) parse(token string, expected PublicTokenType, key psto.V4
 		NotBefore:    nbf,
 		TokenType:    expected,
 		CustomClaims: customClaims,
-	}, nil
+	}
+}
+
+func validatePublicToken(value *psto.Token, expected PublicTokenType) error {
+	typ := ""
+	_ = value.Get("typ", &typ)
+	if typ != string(expected) {
+		return errors.New("paseto: unexpected token type")
+	}
+	exp, _ := value.GetExpiration()
+	if time.Now().UTC().After(exp) {
+		return errors.New("paseto: token expired")
+	}
+	return nil
 }
 
 func newPublicJTI() string {

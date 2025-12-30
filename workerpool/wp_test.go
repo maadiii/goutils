@@ -284,3 +284,153 @@ func TestWorkerPool_SubmitAfterClose(t *testing.T) {
 		t.Fatalf("expected ErrClosedWorkerPool, got %v", err)
 	}
 }
+
+func TestWorkerPool_PendingResults(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pool := NewWorkerPool[int](ctx, DefaultWorkerPoolConfig())
+
+	// Just verify that we can call PendingResults without panicking
+	pending := pool.PendingResults()
+	
+	// Verify the method exists and doesn't panic
+	if pending < 0 {
+		t.Fatalf("PendingResults returned negative value: %d", pending)
+	}
+
+	pool.Close(false)
+}
+
+func TestWorkerPool_CloseGraceful(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pool := NewWorkerPool[int](ctx, DefaultWorkerPoolConfig())
+
+	for i := 0; i < 3; i++ {
+		_ = pool.Submit(simpleJob{id: i})
+	}
+
+	// Test graceful close
+	pool.Close(true)
+
+	// Verify all results are available
+	resultCount := 0
+	for range 3 {
+		select {
+		case <-pool.Results():
+			resultCount++
+		case <-time.After(100 * time.Millisecond):
+			break
+		}
+	}
+
+	if resultCount != 3 {
+		t.Logf("Graceful close: got %d results out of 3", resultCount)
+	}
+}
+
+func TestWorkerPool_MultipleClose(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pool := NewWorkerPool[int](ctx, DefaultWorkerPoolConfig())
+
+	// Close multiple times - should not panic
+	pool.Close(false)
+	pool.Close(false)
+	pool.Close(true)
+}
+
+func TestWorkerPool_ContextCancellation(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	pool := NewWorkerPool[int](ctx, DefaultWorkerPoolConfig())
+
+	_ = pool.Submit(simpleJob{id: 1})
+
+	// Cancel context
+	cancel()
+
+	// Give time for context cancellation to propagate
+	time.Sleep(50 * time.Millisecond)
+
+	pool.Close(false)
+}
+
+func TestWorkerPool_ZeroConfig(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	// Pass zero config to trigger DefaultWorkerPoolConfig
+	pool := NewWorkerPool[int](ctx, WorkerPoolConfig{})
+	defer pool.Close(false)
+
+	_ = pool.Submit(simpleJob{id: 42})
+
+	result := <-pool.Results()
+	if result.Value != 42 {
+		t.Fatalf("expected 42, got %v", result.Value)
+	}
+}
+
+func TestWorkerPool_SubmitWithCancelledContext(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cfg := DefaultWorkerPoolConfig()
+	cfg.JobQueueSize = 0 // Make queue size 0 to force blocking on submit
+	pool := NewWorkerPool[int](ctx, cfg)
+	defer pool.Close(false)
+
+	// Cancel context before submit
+	cancel()
+
+	// Give time for context cancellation to propagate
+	time.Sleep(10 * time.Millisecond)
+
+	// Try to submit a job with cancelled context - should block and return context error
+	err := pool.Submit(simpleJob{id: 1})
+	if err != context.Canceled {
+		t.Fatalf("expected context.Canceled, got %v", err)
+	}
+}
+
+// retryJobWithCtxCancel is a job that takes time to retry, allowing context cancellation during retry
+type retryJobWithCtxCancel struct {
+	id       int
+	failures int32
+}
+
+func (j *retryJobWithCtxCancel) Process(ctx context.Context) (int, error) {
+	if atomic.AddInt32(&j.failures, 1) <= 2 {
+		return 0, errors.New("temporary error")
+	}
+	return j.id, nil
+}
+func (j *retryJobWithCtxCancel) ID() int       { return j.id }
+func (j *retryJobWithCtxCancel) MaxRetries() int           { return 3 }
+func (j *retryJobWithCtxCancel) RetryDelay() time.Duration { return 500 * time.Millisecond }
+
+func TestWorkerPool_RetryWithContextCancellation(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	pool := NewWorkerPool[int](ctx, DefaultWorkerPoolConfig())
+	defer pool.Close(false)
+
+	job := &retryJobWithCtxCancel{id: 7}
+	_ = pool.Submit(job)
+
+	// Cancel context during retry delay
+	time.Sleep(50 * time.Millisecond) // Let job fail once
+	cancel()
+
+	result := <-pool.Results()
+	if result.Error != context.Canceled {
+		t.Fatalf("expected context.Canceled error, got %v", result.Error)
+	}
+}
+

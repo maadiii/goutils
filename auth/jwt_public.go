@@ -3,11 +3,22 @@ package auth
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/json"
 	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
+
+// test hook for signing RS256 tokens
+var jwtRS256Sign = func(token *jwt.Token, key *rsa.PrivateKey) (string, error) {
+	return token.SignedString(key)
+}
+
+// test hook for parsing tokens
+var jwtPublicParseWithClaims = func(tokenString string, claims jwt.Claims, keyFunc jwt.Keyfunc, options ...jwt.ParserOption) (*jwt.Token, error) {
+	return jwt.ParseWithClaims(tokenString, claims, keyFunc, options...)
+}
 
 // JWTPublicTokenType distinguishes access vs refresh tokens.
 type JWTPublicTokenType string
@@ -31,24 +42,24 @@ type JWTPublicClaims struct {
 
 // JWTPublicConfig holds configuration for JWT public (asymmetric) token generation using RSA.
 type JWTPublicConfig struct {
-	Issuer             string
-	AccessPrivateKey   *rsa.PrivateKey
-	AccessPublicKey    *rsa.PublicKey
-	RefreshPrivateKey  *rsa.PrivateKey
-	RefreshPublicKey   *rsa.PublicKey
-	AccessTTL          time.Duration
-	RefreshTTL         time.Duration
+	Issuer            string
+	AccessPrivateKey  *rsa.PrivateKey
+	AccessPublicKey   *rsa.PublicKey
+	RefreshPrivateKey *rsa.PrivateKey
+	RefreshPublicKey  *rsa.PublicKey
+	AccessTTL         time.Duration
+	RefreshTTL        time.Duration
 }
 
 // JWTPublic generates and validates JWT tokens with RSA signatures for access/refresh.
 type JWTPublic struct {
-	issuer             string
-	accessPrivateKey   *rsa.PrivateKey
-	accessPublicKey    *rsa.PublicKey
-	refreshPrivateKey  *rsa.PrivateKey
-	refreshPublicKey   *rsa.PublicKey
-	accessTTL          time.Duration
-	refreshTTL         time.Duration
+	issuer            string
+	accessPrivateKey  *rsa.PrivateKey
+	accessPublicKey   *rsa.PublicKey
+	refreshPrivateKey *rsa.PrivateKey
+	refreshPublicKey  *rsa.PublicKey
+	accessTTL         time.Duration
+	refreshTTL        time.Duration
 }
 
 // NewJWTPublic builds a JWTPublic with distinct RSA key pairs for access and refresh tokens.
@@ -61,24 +72,27 @@ func NewJWTPublic(cfg JWTPublicConfig) (*JWTPublic, error) {
 	}
 
 	return &JWTPublic{
-		issuer:             cfg.Issuer,
-		accessPrivateKey:   cfg.AccessPrivateKey,
-		accessPublicKey:    cfg.AccessPublicKey,
-		refreshPrivateKey:  cfg.RefreshPrivateKey,
-		refreshPublicKey:   cfg.RefreshPublicKey,
-		accessTTL:          cfg.AccessTTL,
-		refreshTTL:         cfg.RefreshTTL,
+		issuer:            cfg.Issuer,
+		accessPrivateKey:  cfg.AccessPrivateKey,
+		accessPublicKey:   cfg.AccessPublicKey,
+		refreshPrivateKey: cfg.RefreshPrivateKey,
+		refreshPublicKey:  cfg.RefreshPublicKey,
+		accessTTL:         cfg.AccessTTL,
+		refreshTTL:        cfg.RefreshTTL,
 	}, nil
 }
 
 // GenerateRSAKeyPair generates a new RSA 2048-bit key pair.
 func GenerateRSAKeyPair() (*rsa.PrivateKey, *rsa.PublicKey, error) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	privateKey, err := rsaGenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, nil, err
 	}
 	return privateKey, &privateKey.PublicKey, nil
 }
+
+// test hook to allow simulating rsa.GenerateKey error in tests
+var rsaGenerateKey = rsa.GenerateKey
 
 // Generate issues a new pair of access and refresh JWT tokens for the given subject and audience.
 // customClaims is an optional map of additional claims to include in both tokens.
@@ -126,7 +140,7 @@ func (j *JWTPublic) makeToken(subject, audience string, typ JWTPublicTokenType, 
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	signed, err := token.SignedString(privateKey)
+	signed, err := jwtRS256Sign(token, privateKey)
 	if err != nil {
 		return "", err
 	}
@@ -135,14 +149,13 @@ func (j *JWTPublic) makeToken(subject, audience string, typ JWTPublicTokenType, 
 }
 
 func (j *JWTPublic) parse(tokenString string, expected JWTPublicTokenType, publicKey *rsa.PublicKey) (JWTPublicClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwtPublicParseWithClaims(tokenString, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
 		// Validate signing method
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, errors.New("jwt: unexpected signing method")
 		}
 		return publicKey, nil
 	})
-
 	if err != nil {
 		return JWTPublicClaims{}, err
 	}
@@ -159,15 +172,9 @@ func (j *JWTPublic) parse(tokenString string, expected JWTPublicTokenType, publi
 	typ, _ := claims["typ"].(string)
 
 	var exp, iat, nbf time.Time
-	if expNum, ok := claims["exp"].(*jwt.NumericDate); ok && expNum != nil {
-		exp = expNum.Time
-	}
-	if iatNum, ok := claims["iat"].(*jwt.NumericDate); ok && iatNum != nil {
-		iat = iatNum.Time
-	}
-	if nbfNum, ok := claims["nbf"].(*jwt.NumericDate); ok && nbfNum != nil {
-		nbf = nbfNum.Time
-	}
+	exp = publicNumericDateFromClaims(claims, "exp")
+	iat = publicNumericDateFromClaims(claims, "iat")
+	nbf = publicNumericDateFromClaims(claims, "nbf")
 
 	if typ != string(expected) {
 		return JWTPublicClaims{}, errors.New("jwt: unexpected token type")
@@ -196,4 +203,29 @@ func (j *JWTPublic) parse(tokenString string, expected JWTPublicTokenType, publi
 		TokenType:    JWTPublicTokenType(typ),
 		CustomClaims: customClaims,
 	}, nil
+}
+
+// publicNumericDateFromClaims mirrors numericDateFromClaims for the public JWT path.
+func publicNumericDateFromClaims(claims jwt.MapClaims, key string) time.Time {
+	v, ok := claims[key]
+	if !ok || v == nil {
+		return time.Time{}
+	}
+	switch tv := v.(type) {
+	case *jwt.NumericDate:
+		if tv != nil {
+			return tv.Time.UTC()
+		}
+	case json.Number:
+		if n, err := tv.Int64(); err == nil {
+			return time.Unix(n, 0).UTC()
+		}
+	case float64:
+		return time.Unix(int64(tv), 0).UTC()
+	case int64:
+		return time.Unix(tv, 0).UTC()
+	case int:
+		return time.Unix(int64(tv), 0).UTC()
+	}
+	return time.Time{}
 }

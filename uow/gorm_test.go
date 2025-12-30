@@ -162,3 +162,24 @@ func TestSavePointAndErrorsWhenNoTx(t *testing.T) {
 		t.Fatalf("expected error when savepoint without tx, got nil")
 	}
 }
+
+func TestBegin_ErrorHandling(t *testing.T) {
+	// Test Begin with an already-closed database to trigger error
+	db := setupDB(t)
+	
+	// Get the underlying sql.DB to close it
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatalf("failed to get sql.DB: %v", err)
+	}
+	sqlDB.Close()
+
+	f := NewGorm(db, newMyFactory)
+	u := f.UoW()
+
+	// Begin should fail because the database is closed
+	_, _, err = u.Begin(context.Background())
+	if err == nil {
+		t.Fatalf("expected error when Begin is called on closed db, got nil")
+	}
+}

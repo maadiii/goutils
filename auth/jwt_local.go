@@ -1,11 +1,22 @@
 package auth
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
+
+// test hook for signing HS256 tokens
+var jwtHS256Sign = func(token *jwt.Token, key []byte) (string, error) {
+	return token.SignedString(key)
+}
+
+// test hook for parsing tokens
+var jwtParseWithClaims = func(tokenString string, claims jwt.Claims, keyFunc jwt.Keyfunc, options ...jwt.ParserOption) (*jwt.Token, error) {
+	return jwt.ParseWithClaims(tokenString, claims, keyFunc, options...)
+}
 
 // JWTLocalTokenType distinguishes access vs refresh tokens.
 type JWTLocalTokenType string
@@ -106,7 +117,7 @@ func (j *JWTLocal) makeToken(subject, audience string, typ JWTLocalTokenType, tt
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, err := token.SignedString(key)
+	signed, err := jwtHS256Sign(token, key)
 	if err != nil {
 		return "", err
 	}
@@ -115,7 +126,7 @@ func (j *JWTLocal) makeToken(subject, audience string, typ JWTLocalTokenType, tt
 }
 
 func (j *JWTLocal) parse(tokenString string, expected JWTLocalTokenType, key []byte) (JWTLocalClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, jwt.MapClaims{}, func(token *jwt.Token) (any, error) {
+	token, err := jwtParseWithClaims(tokenString, jwt.MapClaims{}, func(token *jwt.Token) (any, error) {
 		// Validate signing method
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("jwt: unexpected signing method")
@@ -138,15 +149,9 @@ func (j *JWTLocal) parse(tokenString string, expected JWTLocalTokenType, key []b
 	typ, _ := claims["typ"].(string)
 
 	var exp, iat, nbf time.Time
-	if expNum, ok := claims["exp"].(*jwt.NumericDate); ok && expNum != nil {
-		exp = expNum.Time
-	}
-	if iatNum, ok := claims["iat"].(*jwt.NumericDate); ok && iatNum != nil {
-		iat = iatNum.Time
-	}
-	if nbfNum, ok := claims["nbf"].(*jwt.NumericDate); ok && nbfNum != nil {
-		nbf = nbfNum.Time
-	}
+	exp = numericDateFromClaims(claims, "exp")
+	iat = numericDateFromClaims(claims, "iat")
+	nbf = numericDateFromClaims(claims, "nbf")
 
 	if typ != string(expected) {
 		return JWTLocalClaims{}, errors.New("jwt: unexpected token type")
@@ -175,4 +180,30 @@ func (j *JWTLocal) parse(tokenString string, expected JWTLocalTokenType, key []b
 		TokenType:    JWTLocalTokenType(typ),
 		CustomClaims: customClaims,
 	}, nil
+}
+
+// numericDateFromClaims extracts a time value from MapClaims supporting float64,
+// json.Number, and *jwt.NumericDate values.
+func numericDateFromClaims(claims jwt.MapClaims, key string) time.Time {
+	v, ok := claims[key]
+	if !ok || v == nil {
+		return time.Time{}
+	}
+	switch tv := v.(type) {
+	case *jwt.NumericDate:
+		if tv != nil {
+			return tv.Time.UTC()
+		}
+	case json.Number:
+		if n, err := tv.Int64(); err == nil {
+			return time.Unix(n, 0).UTC()
+		}
+	case float64:
+		return time.Unix(int64(tv), 0).UTC()
+	case int64:
+		return time.Unix(tv, 0).UTC()
+	case int:
+		return time.Unix(int64(tv), 0).UTC()
+	}
+	return time.Time{}
 }

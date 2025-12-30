@@ -1135,3 +1135,50 @@ func TestChooseAccessMode_ReadWrite(t *testing.T) {
 		t.Fatalf("expected ReadWrite, got %v", mode)
 	}
 }
+
+func TestPgxBegin_ErrorHandling(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("failed to create mock pool: %v", err)
+	}
+	defer mock.Close()
+
+	// Expect BeginTx to return an error
+	expectedErr := errors.New("begin transaction failed")
+	mock.ExpectBeginTx(pgx.TxOptions{AccessMode: pgx.ReadWrite}).WillReturnError(expectedErr)
+
+	factory := NewPgx(mock, newPgxFactory)
+	uow := factory.UoW()
+
+	_, _, err = uow.Begin(context.Background())
+	if err == nil {
+		t.Fatalf("expected error from Begin, got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Fatalf("expected error %v, got %v", expectedErr, err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+func TestConvertPgxTxOptions_DefaultIsolationLevel(t *testing.T) {
+	// Test with an unknown/invalid isolation level to hit the default case
+	opts := &sql.TxOptions{
+		Isolation: sql.IsolationLevel(999), // Invalid isolation level
+		ReadOnly:  false,
+	}
+
+	pgxOpts := convertPgxTxOptions(opts)
+
+	// Default should be ReadCommitted
+	if pgxOpts.IsoLevel != pgx.ReadCommitted {
+		t.Fatalf("expected default isolation level ReadCommitted, got %v", pgxOpts.IsoLevel)
+	}
+
+	if pgxOpts.AccessMode != pgx.ReadWrite {
+		t.Fatalf("expected access mode ReadWrite, got %v", pgxOpts.AccessMode)
+	}
+}

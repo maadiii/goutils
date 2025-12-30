@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -102,7 +103,7 @@ func TestPublicExpiryIsEnforced(t *testing.T) {
 		RefreshPrivateKey: rPvt,
 		RefreshPublicKey:  rPub,
 		AccessTTL:         50 * time.Millisecond,
-		RefreshTTL:        time.Second,
+		RefreshTTL:        2 * time.Second,
 	})
 	if err != nil {
 		t.Fatalf("NewPublicPaseto error: %v", err)
@@ -153,6 +154,124 @@ func TestPublicConstructorRejectsBadKeyLength(t *testing.T) {
 	}
 }
 
+func TestPublicConstructorRejectsBadRefreshKeyLength(t *testing.T) {
+	aPvt, aPub, _, _ := testPublicKeys()
+	// Bad refresh private key length
+	if _, err := NewPublicPaseto(PublicPasetoConfig{
+		Issuer:            "iss",
+		AccessPrivateKey:  aPvt,
+		AccessPublicKey:   aPub,
+		RefreshPrivateKey: []byte{1, 2, 3},
+		RefreshPublicKey:  make([]byte, 32),
+		AccessTTL:         time.Minute,
+		RefreshTTL:        time.Minute,
+	}); err == nil {
+		t.Fatalf("expected error for short refresh private key")
+	}
+	// Bad refresh public key length
+	if _, err := NewPublicPaseto(PublicPasetoConfig{
+		Issuer:            "iss",
+		AccessPrivateKey:  aPvt,
+		AccessPublicKey:   aPub,
+		RefreshPrivateKey: make([]byte, 64),
+		RefreshPublicKey:  []byte{1, 2, 3},
+		AccessTTL:         time.Minute,
+		RefreshTTL:        time.Minute,
+	}); err == nil {
+		t.Fatalf("expected error for short refresh public key")
+	}
+}
+
+func TestNewPublicPasetoConstructorLibErrors(t *testing.T) {
+	aPvt, aPub, rPvt, rPub := testPublicKeys()
+	// Stub secret/public key constructors to fail
+	origSec := newV4AsymmetricSecretKeyFromBytes
+	origPub := newV4AsymmetricPublicKeyFromBytes
+	defer func() {
+		newV4AsymmetricSecretKeyFromBytes = origSec
+		newV4AsymmetricPublicKeyFromBytes = origPub
+	}()
+
+	// Fail access private key
+	newV4AsymmetricSecretKeyFromBytes = func(b []byte) (psto.V4AsymmetricSecretKey, error) {
+		return psto.V4AsymmetricSecretKey{}, errors.New("fail")
+	}
+	if _, err := NewPublicPaseto(PublicPasetoConfig{
+		Issuer:            "issuer",
+		AccessPrivateKey:  aPvt,
+		AccessPublicKey:   aPub,
+		RefreshPrivateKey: rPvt,
+		RefreshPublicKey:  rPub,
+		AccessTTL:         time.Minute,
+		RefreshTTL:        time.Minute,
+	}); err == nil {
+		t.Fatalf("expected error when access private key conversion fails")
+	}
+
+	// Succeed access, fail access public key
+	newV4AsymmetricSecretKeyFromBytes = origSec
+	newV4AsymmetricPublicKeyFromBytes = func(b []byte) (psto.V4AsymmetricPublicKey, error) {
+		return psto.V4AsymmetricPublicKey{}, errors.New("fail")
+	}
+	if _, err := NewPublicPaseto(PublicPasetoConfig{
+		Issuer:            "issuer",
+		AccessPrivateKey:  aPvt,
+		AccessPublicKey:   aPub,
+		RefreshPrivateKey: rPvt,
+		RefreshPublicKey:  rPub,
+		AccessTTL:         time.Minute,
+		RefreshTTL:        time.Minute,
+	}); err == nil {
+		t.Fatalf("expected error when access public key conversion fails")
+	}
+
+	// Succeed access pair, fail refresh private
+	newV4AsymmetricPublicKeyFromBytes = origPub
+	calls := 0
+	newV4AsymmetricSecretKeyFromBytes = func(b []byte) (psto.V4AsymmetricSecretKey, error) {
+		calls++
+		if calls == 1 {
+			return origSec(b)
+		}
+		return psto.V4AsymmetricSecretKey{}, errors.New("fail")
+	}
+	if _, err := NewPublicPaseto(PublicPasetoConfig{
+		Issuer:            "issuer",
+		AccessPrivateKey:  aPvt,
+		AccessPublicKey:   aPub,
+		RefreshPrivateKey: rPvt,
+		RefreshPublicKey:  rPub,
+		AccessTTL:         time.Minute,
+		RefreshTTL:        time.Minute,
+	}); err == nil {
+		t.Fatalf("expected error when refresh private key conversion fails")
+	}
+
+	// Succeed refresh private, fail refresh public (need to succeed on first public key call for access, fail on second for refresh)
+	newV4AsymmetricSecretKeyFromBytes = origSec
+	pubCalls := 0
+	newV4AsymmetricPublicKeyFromBytes = func(b []byte) (psto.V4AsymmetricPublicKey, error) {
+		pubCalls++
+		if pubCalls == 1 {
+			// First call is access public key, succeed
+			return origPub(b)
+		}
+		// Second call is refresh public key, fail
+		return psto.V4AsymmetricPublicKey{}, errors.New("fail")
+	}
+	if _, err := NewPublicPaseto(PublicPasetoConfig{
+		Issuer:            "issuer",
+		AccessPrivateKey:  aPvt,
+		AccessPublicKey:   aPub,
+		RefreshPrivateKey: rPvt,
+		RefreshPublicKey:  rPub,
+		AccessTTL:         time.Minute,
+		RefreshTTL:        time.Minute,
+	}); err == nil {
+		t.Fatalf("expected error when refresh public key conversion fails")
+	}
+}
+
 func TestPublicTokensCannotBeValidatedWithWrongPublicKey(t *testing.T) {
 	aPvt, aPub, rPvt, rPub := testPublicKeys()
 	p, err := NewPublicPaseto(PublicPasetoConfig{
@@ -197,6 +316,74 @@ func TestPublicTokensCannotBeValidatedWithWrongPublicKey(t *testing.T) {
 	}
 }
 
+func TestValidatePublicTokenAllBranches(t *testing.T) {
+	now := time.Now().UTC()
+	// Success
+	tok := psto.NewToken()
+	tok.Set("typ", string(PublicAccessToken))
+	tok.SetExpiration(now.Add(time.Minute))
+	if err := validatePublicToken(&tok, PublicAccessToken); err != nil {
+		t.Fatalf("expected success, got %v", err)
+	}
+
+	// Wrong type
+	tok2 := psto.NewToken()
+	tok2.Set("typ", string(PublicRefreshToken))
+	tok2.SetExpiration(now.Add(time.Minute))
+	if err := validatePublicToken(&tok2, PublicAccessToken); err == nil {
+		t.Fatalf("expected type error")
+	}
+
+	// Expired
+	tok3 := psto.NewToken()
+	tok3.Set("typ", string(PublicAccessToken))
+	tok3.SetExpiration(now.Add(-time.Minute))
+	if err := validatePublicToken(&tok3, PublicAccessToken); err == nil {
+		t.Fatalf("expected expiry error")
+	}
+}
+
+func TestPublicParse_AllPathsViaStub(t *testing.T) {
+	aPvt, aPub, rPvt, rPub := testPublicKeys()
+	p, err := NewPublicPaseto(PublicPasetoConfig{Issuer: "iss", AccessPrivateKey: aPvt, AccessPublicKey: aPub, RefreshPrivateKey: rPvt, RefreshPublicKey: rPub, AccessTTL: time.Minute, RefreshTTL: time.Minute})
+	if err != nil { t.Fatalf("NewPublicPaseto error: %v", err) }
+
+	// success via stub
+	orig := parseV4PublicFunc
+	defer func() { parseV4PublicFunc = orig }()
+	goodTok := psto.NewToken()
+	goodTok.Set("typ", string(PublicAccessToken))
+	goodTok.SetExpiration(time.Now().UTC().Add(time.Minute))
+	parseV4PublicFunc = func(key psto.V4AsymmetricPublicKey, token string) (*psto.Token, error) { return &goodTok, nil }
+	if _, err := p.parse("dummy", PublicAccessToken, p.accessPublicKey); err != nil {
+		t.Fatalf("expected success via stub: %v", err)
+	}
+
+	// parser error
+	parseV4PublicFunc = func(key psto.V4AsymmetricPublicKey, token string) (*psto.Token, error) { return nil, errors.New("parse fail") }
+	if _, err := p.parse("dummy", PublicAccessToken, p.accessPublicKey); err == nil {
+		t.Fatalf("expected parse error via stub")
+	}
+
+	// success parse but validation error (wrong type)
+	wrongTypeTok := psto.NewToken()
+	wrongTypeTok.Set("typ", string(PublicRefreshToken))  // expect access, got refresh
+	wrongTypeTok.SetExpiration(time.Now().UTC().Add(time.Minute))
+	parseV4PublicFunc = func(key psto.V4AsymmetricPublicKey, token string) (*psto.Token, error) { return &wrongTypeTok, nil }
+	if _, err := p.parse("dummy", PublicAccessToken, p.accessPublicKey); err == nil {
+		t.Fatalf("expected validation error via stub (wrong type)")
+	}
+
+	// success parse but validation error (expired)
+	expiredTok := psto.NewToken()
+	expiredTok.Set("typ", string(PublicAccessToken))
+	expiredTok.SetExpiration(time.Now().UTC().Add(-time.Minute))
+	parseV4PublicFunc = func(key psto.V4AsymmetricPublicKey, token string) (*psto.Token, error) { return &expiredTok, nil }
+	if _, err := p.parse("dummy", PublicAccessToken, p.accessPublicKey); err == nil {
+		t.Fatalf("expected validation error via stub (expired)")
+	}
+}
+
 func TestPublicCustomClaimsRoundtrip(t *testing.T) {
 	aPvt, aPub, rPvt, rPub := testPublicKeys()
 	p, err := NewPublicPaseto(PublicPasetoConfig{
@@ -237,5 +424,45 @@ func TestPublicCustomClaimsRoundtrip(t *testing.T) {
 	}
 	if acc.CustomClaims["role"] != "viewer" {
 		t.Fatalf("expected role=viewer, got %v", acc.CustomClaims["role"])
+	}
+}
+
+func TestPublicPasetoGenerateSignErrors(t *testing.T) {
+	aPvt, aPub, rPvt, rPub := testPublicKeys()
+	p, err := NewPublicPaseto(PublicPasetoConfig{
+		Issuer:            "issuer",
+		AccessPrivateKey:  aPvt,
+		AccessPublicKey:   aPub,
+		RefreshPrivateKey: rPvt,
+		RefreshPublicKey:  rPub,
+		AccessTTL:         time.Minute,
+		RefreshTTL:        time.Minute,
+	})
+	if err != nil {
+		t.Fatalf("NewPublicPaseto error: %v", err)
+	}
+
+	orig := pasetoV4Sign
+	defer func() { pasetoV4Sign = orig }()
+
+	// Fail access sign
+	pasetoV4Sign = func(tok psto.Token, key psto.V4AsymmetricSecretKey) (string, error) {
+		return "", errors.New("sign fail")
+	}
+	if _, err := p.Generate("s", "a", nil); err == nil {
+		t.Fatalf("expected Generate to fail when access sign fails")
+	}
+
+	// Fail refresh sign only
+	call := 0
+	pasetoV4Sign = func(tok psto.Token, key psto.V4AsymmetricSecretKey) (string, error) {
+		call++
+		if call == 1 {
+			return orig(tok, key)
+		}
+		return "", errors.New("sign fail")
+	}
+	if _, err := p.Generate("s", "a", nil); err == nil {
+		t.Fatalf("expected Generate to fail when refresh sign fails")
 	}
 }

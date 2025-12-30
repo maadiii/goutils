@@ -75,3 +75,55 @@ func TestSpawn_ContextCanceled_PreventsSend(t *testing.T) {
 		// expected path: still blocked
 	}
 }
+
+func TestSpawn_PanicWithContextCanceled(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	startPanic := make(chan struct{})
+
+	f := Spawn(ctx, func(c context.Context) (int, error) {
+		<-startPanic
+		panic("crash!")
+	})
+
+	// Cancel context before allowing the panic
+	cancel()
+	close(startPanic)
+
+	// Give time for panic to be handled with cancelled context
+	time.Sleep(20 * time.Millisecond)
+
+	// Await should still block because the panic's select chose ctx.Done() path
+	done := make(chan struct{})
+	go func() {
+		f.Await()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		t.Fatalf("expected Await to block when panic recovery skips send due to cancelled context")
+	case <-time.After(100 * time.Millisecond):
+		// expected: still blocked
+	}
+}
+
+func TestSpawn_ErrorReturned(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	expectedErr := context.Canceled
+	f := Spawn(ctx, func(ctx context.Context) (string, error) {
+		return "", expectedErr
+	})
+
+	v, err := f.Await()
+	if err != expectedErr {
+		t.Fatalf("expected error %v, got %v", expectedErr, err)
+	}
+	if v != "" {
+		t.Fatalf("expected empty string, got %v", v)
+	}
+}

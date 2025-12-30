@@ -82,3 +82,100 @@ func TestGenerateWithDifferentDigits(t *testing.T) {
 		t.Fatalf("Validate returned error for valid 8-digit code: %v", err)
 	}
 }
+
+func TestValidateWithDifferentPeriod(t *testing.T) {
+	svc := New()
+	opts := Opts{
+		Issuer:      "TestIssuer",
+		AccountName: "user4@example.com",
+		Period:      60,
+		Digits:      6,
+	}
+
+	secret, code, err := svc.Generate(opts)
+	if err != nil {
+		t.Fatalf("Generate returned error: %v", err)
+	}
+
+	if err := svc.Validate(code, secret, opts); err != nil {
+		t.Fatalf("Validate returned error for valid code with 60s period: %v", err)
+	}
+}
+
+func TestValidateInvalidSecret(t *testing.T) {
+	svc := New()
+	opts := Opts{
+		Issuer:      "TestIssuer",
+		AccountName: "user5@example.com",
+		Period:      30,
+		Digits:      6,
+	}
+
+	_, code, err := svc.Generate(opts)
+	if err != nil {
+		t.Fatalf("Generate returned error: %v", err)
+	}
+
+	if err := svc.Validate(code, "invalid-secret", opts); err == nil {
+		t.Fatalf("expected Validate to fail with invalid secret")
+	}
+}
+
+func TestGenerateWithEmptyOpts(t *testing.T) {
+	// Test with minimal/empty opts - the underlying library requires Issuer
+	svc := New()
+	opts := Opts{
+		Issuer:      "",
+		AccountName: "",
+		Period:      30,
+		Digits:      6,
+	}
+
+	_, _, err := svc.Generate(opts)
+	// The underlying library requires a non-empty Issuer, so this should error
+	if err == nil {
+		t.Fatalf("expected Generate to return error with empty Issuer")
+	}
+}
+
+func TestValidateEmptyCode(t *testing.T) {
+	// Test validation with empty code
+	svc := New()
+	opts := Opts{
+		Issuer:      "TestIssuer",
+		AccountName: "user@example.com",
+		Period:      30,
+		Digits:      6,
+	}
+
+	secret, _, err := svc.Generate(opts)
+	if err != nil {
+		t.Fatalf("Generate returned error: %v", err)
+	}
+
+	// Validate with empty code should fail
+	if err := svc.Validate("", secret, opts); err == nil {
+		t.Fatalf("expected Validate to fail with empty code")
+	}
+}
+
+func TestValidateEmptySecret(t *testing.T) {
+	// Test validation with empty secret
+	svc := New()
+	opts := Opts{
+		Issuer:      "TestIssuer",
+		AccountName: "user@example.com",
+		Period:      30,
+		Digits:      6,
+	}
+
+	_, code, err := svc.Generate(opts)
+	if err != nil {
+		t.Fatalf("Generate returned error: %v", err)
+	}
+
+	// Validate with empty secret should fail
+	if err := svc.Validate(code, "", opts); err == nil {
+		t.Fatalf("expected Validate to fail with empty secret")
+	}
+}

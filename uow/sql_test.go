@@ -753,3 +753,25 @@ func TestSqlIntegration_DoVsManualBeginCommit_ProducesSameResult(t *testing.T) {
 		t.Fatalf("Begin/Commit: expected 2 users, got %d", got2)
 	}
 }
+
+func TestSqlBegin_ErrorHandling(t *testing.T) {
+	db := setupSqlDB(t)
+	
+	// Close the database to trigger an error on Begin
+	db.Close()
+
+	factory := NewSql(db, newSqlFactory)
+	uow := factory.UoW()
+
+	// Begin should fail because the database is closed
+	_, _, err := uow.Begin(context.Background())
+	if err == nil {
+		t.Fatalf("expected error when Begin is called on closed db, got nil")
+	}
+	
+	// Also test with options to ensure the opts path is covered
+	_, _, err = uow.Begin(context.Background(), &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err == nil {
+		t.Fatalf("expected error when Begin is called on closed db with options, got nil")
+	}
+}
