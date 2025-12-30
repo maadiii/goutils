@@ -45,7 +45,7 @@ func TestWithContext_FromContext(t *testing.T) {
 		t.Fatalf("FromContext returned nil")
 	}
 
-	// verify it implements utils.Logger by calling a method
+	// verify it implements goutils.Logger by calling a method
 	got.Info("test-msg", "k", "v")
 
 	// type assert to our spy to inspect calls
@@ -147,7 +147,7 @@ func TestZap_InvalidLevel(t *testing.T) {
 			t.Fatal("Expected panic for invalid level")
 		}
 	}()
-	
+
 	cfg := Config{
 		ServiceName: "test",
 		Env:         "test",
@@ -159,6 +159,6 @@ func TestZap_InvalidLevel(t *testing.T) {
 		BatchSize: 5,
 		BatchDur:  100 * time.Millisecond,
 	}
-	
+
 	_ = Zap(cfg)
 }

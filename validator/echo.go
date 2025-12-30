@@ -2,7 +2,6 @@ package validator
 
 import (
 	"github.com/go-playground/validator/v10"
-	"github.com/maadiii/utils/errors"
 )
 
 type Validator struct {
@@ -16,9 +15,7 @@ func NewValidator() *Validator {
 }
 
 func (v *Validator) Validate(i any) (err error) {
-	if err = v.validator.Struct(i); err != nil {
-		err = errors.BadRequest().Wrap(err)
-	}
+	err = v.validator.Struct(i)
 
 	return
 }

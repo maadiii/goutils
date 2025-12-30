@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/maadiii/utils"
+	"github.com/maadiii/goutils"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -38,10 +38,10 @@ const (
 
 type loggerKey struct{}
 
-func WithContext(ctx context.Context, logger utils.Logger) context.Context {
+func WithContext(ctx context.Context, logger goutils.Logger) context.Context {
 	return context.WithValue(ctx, loggerKey{}, logger)
 }
 
-func FromContext(ctx context.Context) utils.Logger {
-	return ctx.Value(loggerKey{}).(utils.Logger)
+func FromContext(ctx context.Context) goutils.Logger {
+	return ctx.Value(loggerKey{}).(goutils.Logger)
 }

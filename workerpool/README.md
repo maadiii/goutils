@@ -9,7 +9,7 @@ The workerpool package provides a robust implementation of the worker pool patte
 ## Installation
 
 ```bash
-go get github.com/maadiii/utils/workerpool
+go get github.com/maadiii/goutils/workerpool
 ```
 
 ## Features
@@ -34,7 +34,7 @@ import (
     "fmt"
     "time"
 
-    "github.com/maadiii/utils/workerpool"
+    "github.com/maadiii/goutils/workerpool"
 )
 
 func main() {
@@ -108,7 +108,7 @@ import (
     "image"
     "time"
 
-    "github.com/maadiii/utils/workerpool"
+    "github.com/maadiii/goutils/workerpool"
 )
 
 type ImageResult struct {

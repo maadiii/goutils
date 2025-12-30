@@ -9,7 +9,7 @@ The Unit of Work pattern provides a clean abstraction for managing database tran
 ## Installation
 
 ```bash
-go get github.com/maadiii/utils/uow
+go get github.com/maadiii/goutils/uow
 ```
 
 ## Features
@@ -40,7 +40,7 @@ package main
 
 import (
     "context"
-    "github.com/maadiii/utils/uow"
+    "github.com/maadiii/goutils/uow"
     "gorm.io/driver/postgres"
     "gorm.io/gorm"
 )
@@ -152,7 +152,7 @@ package main
 import (
     "context"
     "github.com/jackc/pgx/v5/pgxpool"
-    "github.com/maadiii/utils/uow"
+    "github.com/maadiii/goutils/uow"
 )
 
 type AccountRepository struct {
@@ -210,7 +210,7 @@ package main
 import (
     "context"
     "database/sql"
-    "github.com/maadiii/utils/uow"
+    "github.com/maadiii/goutils/uow"
     _ "github.com/lib/pq"
 )
 

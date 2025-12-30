@@ -5,10 +5,10 @@ import (
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/maadiii/utils"
+	"github.com/maadiii/goutils"
 )
 
-func HertzMiddleware(logger utils.Logger) app.HandlerFunc {
+func HertzMiddleware(logger goutils.Logger) app.HandlerFunc {
 	return func(c context.Context, ctx *app.RequestContext) {
 		c = WithContext(c, logger)
 
@@ -21,7 +21,7 @@ func HertzMiddleware(logger utils.Logger) app.HandlerFunc {
 	}
 }
 
-func logRequest(c context.Context, ctx *app.RequestContext, logger utils.Logger) { //nolint
+func logRequest(c context.Context, ctx *app.RequestContext, logger goutils.Logger) { //nolint
 	if strings.Contains(string(ctx.URI().Path()), "swagger") ||
 		strings.Contains(string(ctx.URI().Path()), "health") {
 		return

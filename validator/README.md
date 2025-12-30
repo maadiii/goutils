@@ -9,7 +9,7 @@ The validator package provides a simple wrapper around the popular go-playground
 ## Installation
 
 ```bash
-go get github.com/maadiii/utils/validator
+go get github.com/maadiii/goutils/validator
 ```
 
 ## Features
@@ -29,7 +29,7 @@ package main
 
 import (
     "github.com/labstack/echo/v4"
-    "github.com/maadiii/utils/validator"
+    "github.com/maadiii/goutils/validator"
 )
 
 func main() {
@@ -82,7 +82,7 @@ import (
     "net/http"
 
     "github.com/labstack/echo/v4"
-    "github.com/maadiii/utils/validator"
+    "github.com/maadiii/goutils/validator"
 )
 
 type RegisterRequest struct {

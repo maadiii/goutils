@@ -16,7 +16,7 @@ For detailed implementation information, see [JWT_IMPLEMENTATION.md](JWT_IMPLEME
 ## Installation
 
 ```bash
-go get github.com/maadiii/utils/auth
+go get github.com/maadiii/goutils/auth
 ```
 
 ## Features
@@ -42,7 +42,7 @@ import (
     "fmt"
     "time"
 
-    "github.com/maadiii/utils/auth"
+    "github.com/maadiii/goutils/auth"
 )
 
 func main() {

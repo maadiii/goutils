@@ -9,7 +9,7 @@ The async package provides a simple and type-safe way to execute asynchronous op
 ## Installation
 
 ```bash
-go get github.com/maadiii/utils/async
+go get github.com/maadiii/goutils/async
 ```
 
 ## Features
@@ -31,7 +31,7 @@ import (
     "fmt"
     "time"
 
-    "github.com/maadiii/utils/async"
+    "github.com/maadiii/goutils/async"
 )
 
 func main() {

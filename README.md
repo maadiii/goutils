@@ -1,9 +1,9 @@
-# Utils
+# Goutils
 
-[![Go Version](https://img.shields.io/github/go-mod/go-version/maadiii/utils)](https://golang.org/doc/devel/release.html)
-[![Go Report Card](https://goreportcard.com/badge/github.com/maadiii/utils)](https://goreportcard.com/report/github.com/maadiii/utils)
-[![GoDoc](https://godoc.org/github.com/maadiii/utils?status.svg)](https://godoc.org/github.com/maadiii/utils)
-[![License](https://img.shields.io/github/license/maadiii/utils)](LICENSE)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/maadiii/goutils)](https://golang.org/doc/devel/release.html)
+[![Go Report Card](https://goreportcard.com/badge/github.com/maadiii/goutils)](https://goreportcard.com/report/github.com/maadiii/goutils)
+[![GoDoc](https://godoc.org/github.com/maadiii/goutils?status.svg)](https://godoc.org/github.com/maadiii/goutils)
+[![License](https://img.shields.io/github/license/maadiii/goutils)](LICENSE)
 A comprehensive collection of utility packages for Go applications, providing robust solutions for common development needs including authentication, caching, encryption, error handling, logging, and more.
 
 ## Features
@@ -23,7 +23,7 @@ A comprehensive collection of utility packages for Go applications, providing ro
 ## Installation
 
 ```bash
-go get github.com/maadiii/utils
+go get github.com/maadiii/goutils
 ```
 
 ## Requirements
@@ -39,7 +39,7 @@ Comprehensive authentication package supporting both JWT and PASETO tokens with 
 #### JWT Local (Symmetric)
 
 ```go
-import "github.com/maadiii/utils/auth"
+import "github.com/maadiii/goutils/auth"
 
 // Create a JWT local authenticator
 jwtLocal, err := auth.NewJWTLocal("your-secret-key")
@@ -77,7 +77,7 @@ claims, err := pasetoLocal.Verify(token)
 Execute asynchronous operations with error handling.
 
 ```go
-import "github.com/maadiii/utils/async"
+import "github.com/maadiii/goutils/async"
 
 // Execute async operation
 result, err := async.Do(context.Background(), func(ctx context.Context) (interface{}, error) {
@@ -91,7 +91,7 @@ result, err := async.Do(context.Background(), func(ctx context.Context) (interfa
 Redis-based caching solution with a clean interface.
 
 ```go
-import "github.com/maadiii/utils/cache"
+import "github.com/maadiii/goutils/cache"
 
 // Initialize cache
 cache, err := cache.New(cache.Config{
@@ -112,7 +112,7 @@ value, err := cache.Get(ctx, "key")
 Password hashing and random string generation utilities.
 
 ```go
-import "github.com/maadiii/utils/encryption"
+import "github.com/maadiii/goutils/encryption"
 
 // Hash password
 hashedPassword, err := encryption.HashPassword("my-password")
@@ -129,7 +129,7 @@ randomStr, err := encryption.RandomString(32)
 Enhanced error handling with framework-specific integrations.
 
 ```go
-import "github.com/maadiii/utils/errors"
+import "github.com/maadiii/goutils/errors"
 
 // Create custom error
 err := errors.New("something went wrong").
@@ -150,7 +150,7 @@ h.Use(errors.HertzErrorMiddleware())
 Zap logger wrapper with middleware support for Echo and Hertz.
 
 ```go
-import "github.com/maadiii/utils/log"
+import "github.com/maadiii/goutils/log"
 
 // Initialize logger
 logger, err := log.NewZapLogger(log.Config{
@@ -174,7 +174,7 @@ h.Use(log.HertzMiddleware(logger))
 Time-based One-Time Password implementation.
 
 ```go
-import "github.com/maadiii/utils/totp"
+import "github.com/maadiii/goutils/totp"
 
 // Generate TOTP key
 key, err := totp.Generate(totp.GenerateOpts{
@@ -196,7 +196,7 @@ Database transaction patterns for multiple ORMs and database drivers.
 #### GORM
 
 ```go
-import "github.com/maadiii/utils/uow"
+import "github.com/maadiii/goutils/uow"
 
 uow := uow.NewGormUnitOfWork(db)
 err := uow.Begin(ctx, func(ctx context.Context) error {
@@ -220,7 +220,7 @@ err := uow.Begin(ctx, func(ctx context.Context) error {
 Common utility functions for everyday tasks.
 
 ```go
-import "github.com/maadiii/utils/util"
+import "github.com/maadiii/goutils/util"
 
 // String pointer
 strPtr := util.StringPtr("hello")
@@ -237,7 +237,7 @@ exists := util.Contains([]string{"a", "b", "c"}, "b")
 Request validation middleware for Echo framework.
 
 ```go
-import "github.com/maadiii/utils/validator"
+import "github.com/maadiii/goutils/validator"
 
 app := echo.New()
 app.Validator = validator.NewValidator()
@@ -253,7 +253,7 @@ type RequestBody struct {
 Concurrent job processing with configurable worker pools.
 
 ```go
-import "github.com/maadiii/utils/workerpool"
+import "github.com/maadiii/goutils/workerpool"
 
 // Create worker pool
 pool := workerpool.New(workerpool.Config{

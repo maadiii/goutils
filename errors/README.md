@@ -9,7 +9,7 @@ The errors package provides structured error handling with support for error cod
 ## Installation
 
 ```bash
-go get github.com/maadiii/utils/errors
+go get github.com/maadiii/goutils/errors
 ```
 
 ## Features
@@ -30,7 +30,7 @@ package main
 
 import (
     "fmt"
-    "github.com/maadiii/utils/errors"
+    "github.com/maadiii/goutils/errors"
 )
 
 func main() {
@@ -68,7 +68,7 @@ package main
 
 import (
     "github.com/labstack/echo/v4"
-    "github.com/maadiii/utils/errors"
+    "github.com/maadiii/goutils/errors"
 )
 
 type UserService struct {
@@ -127,7 +127,7 @@ func main() {
 ```go
 import (
     "github.com/labstack/echo/v4"
-    "github.com/maadiii/utils/errors"
+    "github.com/maadiii/goutils/errors"
 )
 
 func main() {
@@ -164,7 +164,7 @@ func GetUser(c echo.Context) error {
 ```go
 import (
     "github.com/cloudwego/hertz/pkg/app/server"
-    "github.com/maadiii/utils/errors"
+    "github.com/maadiii/goutils/errors"
 )
 
 func main() {

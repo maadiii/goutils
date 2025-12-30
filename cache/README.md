@@ -9,7 +9,7 @@ The cache package provides a straightforward wrapper around Redis for caching op
 ## Installation
 
 ```bash
-go get github.com/maadiii/utils/cache
+go get github.com/maadiii/goutils/cache
 ```
 
 ## Dependencies
@@ -37,7 +37,7 @@ import (
     "fmt"
     "time"
 
-    "github.com/maadiii/utils/cache"
+    "github.com/maadiii/goutils/cache"
     "github.com/redis/go-redis/v9"
 )
 

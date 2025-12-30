@@ -1,10 +1,10 @@
-package utils
+package goutils
 
 import (
 	"context"
 	"time"
 
-	"github.com/maadiii/utils/totp"
+	"github.com/maadiii/goutils/totp"
 )
 
 type TOTP interface {

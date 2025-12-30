@@ -9,7 +9,7 @@ The TOTP package provides a simple and secure way to implement time-based one-ti
 ## Installation
 
 ```bash
-go get github.com/maadiii/utils/totp
+go get github.com/maadiii/goutils/totp
 ```
 
 ## Features
@@ -29,7 +29,7 @@ package main
 
 import (
     "fmt"
-    "github.com/maadiii/utils/totp"
+    "github.com/maadiii/goutils/totp"
 )
 
 func main() {
@@ -73,7 +73,7 @@ package main
 
 import (
     "fmt"
-    "github.com/maadiii/utils/totp"
+    "github.com/maadiii/goutils/totp"
 )
 
 type User struct {
@@ -156,7 +156,7 @@ func main() {
 ```go
 import (
     "github.com/labstack/echo/v4"
-    "github.com/maadiii/utils/totp"
+    "github.com/maadiii/goutils/totp"
 )
 
 type Enable2FAResponse struct {

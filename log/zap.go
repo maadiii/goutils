@@ -4,7 +4,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/maadiii/utils"
+	"github.com/maadiii/goutils"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -20,7 +20,7 @@ type zapLogger struct {
 	batchDur  time.Duration
 }
 
-func Zap(cfg Config) utils.Logger {
+func Zap(cfg Config) goutils.Logger {
 	var ws []zapcore.WriteSyncer
 	if cfg.Writer.Stdout {
 		ws = append(ws, zapcore.AddSync(os.Stdout))

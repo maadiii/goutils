@@ -9,7 +9,7 @@ The util package provides type-safe utility functions using Go generics for work
 ## Installation
 
 ```bash
-go get github.com/maadiii/utils/util
+go get github.com/maadiii/goutils/util
 ```
 
 ## Features
@@ -30,7 +30,7 @@ package main
 
 import (
     "fmt"
-    "github.com/maadiii/utils/util"
+    "github.com/maadiii/goutils/util"
 )
 
 func main() {
@@ -50,7 +50,7 @@ func main() {
 #### Create Pointer from Value
 
 ```go
-import "github.com/maadiii/utils/util"
+import "github.com/maadiii/goutils/util"
 
 // Create pointer to value
 name := "Alice"
@@ -72,7 +72,7 @@ user := User{
 #### Create Pointer or Nil for Zero Values
 
 ```go
-import "github.com/maadiii/utils/util"
+import "github.com/maadiii/goutils/util"
 
 // Returns pointer for non-zero values
 name := "Charlie"
@@ -104,7 +104,7 @@ package main
 import (
     "encoding/json"
     "fmt"
-    "github.com/maadiii/utils/util"
+    "github.com/maadiii/goutils/util"
 )
 
 type User struct {
@@ -168,7 +168,7 @@ func main() {
 ```go
 import (
     "database/sql"
-    "github.com/maadiii/utils/util"
+    "github.com/maadiii/goutils/util"
 )
 
 type Product struct {

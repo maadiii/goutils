@@ -1,4 +1,4 @@
-module github.com/maadiii/utils
+module github.com/maadiii/goutils
 
 go 1.24.3
 

@@ -9,7 +9,7 @@ The encryption package provides secure password hashing with bcrypt and cryptogr
 ## Installation
 
 ```bash
-go get github.com/maadiii/utils/encryption
+go get github.com/maadiii/goutils/encryption
 ```
 
 ## Features
@@ -29,7 +29,7 @@ package main
 import (
     "fmt"
 
-    "github.com/maadiii/utils/encryption"
+    "github.com/maadiii/goutils/encryption"
 )
 
 func main() {
@@ -56,7 +56,7 @@ func main() {
 ### Random String Generation
 
 ```go
-import "github.com/maadiii/utils/encryption"
+import "github.com/maadiii/goutils/encryption"
 
 // Generate a random string (for tokens, IDs, etc.)
 randomStr, err := encryption.RandomString(32)
@@ -75,7 +75,7 @@ package main
 
 import (
     "fmt"
-    "github.com/maadiii/utils/encryption"
+    "github.com/maadiii/goutils/encryption"
 )
 
 type User struct {

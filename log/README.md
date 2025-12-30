@@ -9,7 +9,7 @@ The log package provides a production-ready logging solution built on top of Ube
 ## Installation
 
 ```bash
-go get github.com/maadiii/utils/log
+go get github.com/maadiii/goutils/log
 ```
 
 ## Features
@@ -30,7 +30,7 @@ go get github.com/maadiii/utils/log
 package main
 
 import (
-    "github.com/maadiii/utils/log"
+    "github.com/maadiii/goutils/log"
     "go.uber.org/zap"
 )
 
@@ -70,7 +70,7 @@ func main() {
 ```go
 import (
     "github.com/labstack/echo/v4"
-    "github.com/maadiii/utils/log"
+    "github.com/maadiii/goutils/log"
 )
 
 func main() {
@@ -102,7 +102,7 @@ func main() {
 ```go
 import (
     "github.com/cloudwego/hertz/pkg/app/server"
-    "github.com/maadiii/utils/log"
+    "github.com/maadiii/goutils/log"
 )
 
 func main() {
@@ -385,7 +385,7 @@ func main() {
 
 ```go
 func handleRequest(c echo.Context) error {
-    logger := c.Get("logger").(utils.Logger)
+    logger := c.Get("logger").(goutils.Logger)
 
     logger.Info("processing request",
         zap.String("endpoint", c.Path()),
