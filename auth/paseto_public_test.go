@@ -346,7 +346,9 @@ func TestValidatePublicTokenAllBranches(t *testing.T) {
 func TestPublicParse_AllPathsViaStub(t *testing.T) {
 	aPvt, aPub, rPvt, rPub := testPublicKeys()
 	p, err := NewPublicPaseto(PublicPasetoConfig{Issuer: "iss", AccessPrivateKey: aPvt, AccessPublicKey: aPub, RefreshPrivateKey: rPvt, RefreshPublicKey: rPub, AccessTTL: time.Minute, RefreshTTL: time.Minute})
-	if err != nil { t.Fatalf("NewPublicPaseto error: %v", err) }
+	if err != nil {
+		t.Fatalf("NewPublicPaseto error: %v", err)
+	}
 
 	// success via stub
 	orig := parseV4PublicFunc
@@ -360,14 +362,16 @@ func TestPublicParse_AllPathsViaStub(t *testing.T) {
 	}
 
 	// parser error
-	parseV4PublicFunc = func(key psto.V4AsymmetricPublicKey, token string) (*psto.Token, error) { return nil, errors.New("parse fail") }
+	parseV4PublicFunc = func(key psto.V4AsymmetricPublicKey, token string) (*psto.Token, error) {
+		return nil, errors.New("parse fail")
+	}
 	if _, err := p.parse("dummy", PublicAccessToken, p.accessPublicKey); err == nil {
 		t.Fatalf("expected parse error via stub")
 	}
 
 	// success parse but validation error (wrong type)
 	wrongTypeTok := psto.NewToken()
-	wrongTypeTok.Set("typ", string(PublicRefreshToken))  // expect access, got refresh
+	wrongTypeTok.Set("typ", string(PublicRefreshToken)) // expect access, got refresh
 	wrongTypeTok.SetExpiration(time.Now().UTC().Add(time.Minute))
 	parseV4PublicFunc = func(key psto.V4AsymmetricPublicKey, token string) (*psto.Token, error) { return &wrongTypeTok, nil }
 	if _, err := p.parse("dummy", PublicAccessToken, p.accessPublicKey); err == nil {
@@ -399,7 +403,7 @@ func TestPublicCustomClaimsRoundtrip(t *testing.T) {
 		t.Fatalf("NewPublicPaseto error: %v", err)
 	}
 
-	customClaims := map[string]interface{}{
+	customClaims := map[string]any{
 		"user_id":     "user-789",
 		"role":        "viewer",
 		"permissions": []string{"read", "write"},

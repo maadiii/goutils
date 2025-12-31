@@ -35,7 +35,7 @@ type JWTLocalClaims struct {
 	IssuedAt     time.Time
 	NotBefore    time.Time
 	TokenType    JWTLocalTokenType
-	CustomClaims map[string]interface{}
+	CustomClaims map[string]any
 }
 
 // JWTLocalConfig holds configuration for JWT local token generation using HMAC.
@@ -96,7 +96,7 @@ func (j *JWTLocal) ValidateRefresh(token string) (JWTLocalClaims, error) {
 	return j.parse(token, JWTRefreshToken, j.refreshKey)
 }
 
-func (j *JWTLocal) makeToken(subject, audience string, typ JWTLocalTokenType, ttl time.Duration, key []byte, customClaims map[string]interface{}) (string, error) {
+func (j *JWTLocal) makeToken(subject, audience string, typ JWTLocalTokenType, ttl time.Duration, key []byte, customClaims map[string]any) (string, error) {
 	now := time.Now().UTC()
 	exp := now.Add(ttl)
 

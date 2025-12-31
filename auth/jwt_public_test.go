@@ -23,13 +23,13 @@ func TestJWTPublicGenerateAndValidateSuccess(t *testing.T) {
 	}
 
 	j, err := NewJWTPublic(JWTPublicConfig{
-		Issuer:             "issuer",
-		AccessPrivateKey:   aPriv,
-		AccessPublicKey:    aPub,
-		RefreshPrivateKey:  rPriv,
-		RefreshPublicKey:   rPub,
-		AccessTTL:          time.Minute,
-		RefreshTTL:         2 * time.Minute,
+		Issuer:            "issuer",
+		AccessPrivateKey:  aPriv,
+		AccessPublicKey:   aPub,
+		RefreshPrivateKey: rPriv,
+		RefreshPublicKey:  rPub,
+		AccessTTL:         time.Minute,
+		RefreshTTL:        2 * time.Minute,
 	})
 	if err != nil {
 		t.Fatalf("NewJWTPublic error: %v", err)
@@ -72,13 +72,13 @@ func TestJWTPublicValidateRejectsWrongKey(t *testing.T) {
 	}
 
 	j, err := NewJWTPublic(JWTPublicConfig{
-		Issuer:             "issuer",
-		AccessPrivateKey:   aPriv,
-		AccessPublicKey:    aPub,
-		RefreshPrivateKey:  rPriv,
-		RefreshPublicKey:   rPub,
-		AccessTTL:          time.Minute,
-		RefreshTTL:         time.Minute,
+		Issuer:            "issuer",
+		AccessPrivateKey:  aPriv,
+		AccessPublicKey:   aPub,
+		RefreshPrivateKey: rPriv,
+		RefreshPublicKey:  rPub,
+		AccessTTL:         time.Minute,
+		RefreshTTL:        time.Minute,
 	})
 	if err != nil {
 		t.Fatalf("NewJWTPublic error: %v", err)
@@ -92,13 +92,13 @@ func TestJWTPublicValidateRejectsWrongKey(t *testing.T) {
 	// Try to validate with wrong public key
 	wrongPriv, wrongPub, _ := GenerateRSAKeyPair()
 	jWrong, _ := NewJWTPublic(JWTPublicConfig{
-		Issuer:             "issuer",
-		AccessPrivateKey:   wrongPriv,
-		AccessPublicKey:    wrongPub,
-		RefreshPrivateKey:  wrongPriv,
-		RefreshPublicKey:   wrongPub,
-		AccessTTL:          time.Minute,
-		RefreshTTL:         time.Minute,
+		Issuer:            "issuer",
+		AccessPrivateKey:  wrongPriv,
+		AccessPublicKey:   wrongPub,
+		RefreshPrivateKey: wrongPriv,
+		RefreshPublicKey:  wrongPub,
+		AccessTTL:         time.Minute,
+		RefreshTTL:        time.Minute,
 	})
 
 	if _, err := jWrong.ValidateAccess(toks.Access); err == nil {
@@ -118,13 +118,13 @@ func TestJWTPublicValidateRejectsWrongType(t *testing.T) {
 	}
 
 	j, err := NewJWTPublic(JWTPublicConfig{
-		Issuer:             "issuer",
-		AccessPrivateKey:   aPriv,
-		AccessPublicKey:    aPub,
-		RefreshPrivateKey:  rPriv,
-		RefreshPublicKey:   rPub,
-		AccessTTL:          time.Minute,
-		RefreshTTL:         time.Minute,
+		Issuer:            "issuer",
+		AccessPrivateKey:  aPriv,
+		AccessPublicKey:   aPub,
+		RefreshPrivateKey: rPriv,
+		RefreshPublicKey:  rPub,
+		AccessTTL:         time.Minute,
+		RefreshTTL:        time.Minute,
 	})
 	if err != nil {
 		t.Fatalf("NewJWTPublic error: %v", err)
@@ -155,13 +155,13 @@ func TestJWTPublicValidateRejectsExpiredToken(t *testing.T) {
 	}
 
 	j, err := NewJWTPublic(JWTPublicConfig{
-		Issuer:             "issuer",
-		AccessPrivateKey:   aPriv,
-		AccessPublicKey:    aPub,
-		RefreshPrivateKey:  rPriv,
-		RefreshPublicKey:   rPub,
-		AccessTTL:          -time.Second, // Expired
-		RefreshTTL:         time.Minute,
+		Issuer:            "issuer",
+		AccessPrivateKey:  aPriv,
+		AccessPublicKey:   aPub,
+		RefreshPrivateKey: rPriv,
+		RefreshPublicKey:  rPub,
+		AccessTTL:         -time.Second, // Expired
+		RefreshTTL:        time.Minute,
 	})
 	if err != nil {
 		t.Fatalf("NewJWTPublic error: %v", err)
@@ -189,24 +189,24 @@ func TestJWTPublicCustomClaims(t *testing.T) {
 	}
 
 	j, err := NewJWTPublic(JWTPublicConfig{
-		Issuer:             "issuer",
-		AccessPrivateKey:   aPriv,
-		AccessPublicKey:    aPub,
-		RefreshPrivateKey:  rPriv,
-		RefreshPublicKey:   rPub,
-		AccessTTL:          time.Minute,
-		RefreshTTL:         time.Minute,
+		Issuer:            "issuer",
+		AccessPrivateKey:  aPriv,
+		AccessPublicKey:   aPub,
+		RefreshPrivateKey: rPriv,
+		RefreshPublicKey:  rPub,
+		AccessTTL:         time.Minute,
+		RefreshTTL:        time.Minute,
 	})
 	if err != nil {
 		t.Fatalf("NewJWTPublic error: %v", err)
 	}
 
-	customClaims := map[string]interface{}{
-		"user_id":  "user-789",
-		"role":     "user",
-		"tenant":   "tenant-123",
-		"perms":    42,
-		"enabled":  true,
+	customClaims := map[string]any{
+		"user_id": "user-789",
+		"role":    "user",
+		"tenant":  "tenant-123",
+		"perms":   42,
+		"enabled": true,
 	}
 
 	toks, err := j.Generate("john@example.com", "mobile-app", customClaims)
@@ -399,12 +399,12 @@ func TestJWTPublicParsesTimesFromClaims(t *testing.T) {
 func TestPublicNumericDateHelperCoversTypes(t *testing.T) {
 	now := time.Now().UTC()
 	claims := jwt.MapClaims{
-		"exp": jwt.NewNumericDate(now),
-		"iat": json.Number("123"),
-		"nbf": float64(456),
+		"exp":   jwt.NewNumericDate(now),
+		"iat":   json.Number("123"),
+		"nbf":   float64(456),
 		"int64": int64(789),
-		"int": 7,
-		"bad": "noop",
+		"int":   7,
+		"bad":   "noop",
 	}
 	if got := publicNumericDateFromClaims(claims, "exp"); got.IsZero() {
 		t.Fatalf("expected exp from *NumericDate")

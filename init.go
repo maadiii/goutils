@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/maadiii/goutils/auth"
 	"github.com/maadiii/goutils/totp"
 )
 
@@ -33,4 +34,28 @@ type Logger interface {
 	Warn(msg string, fields ...any)
 	Error(msg string, fields ...any)
 	Sync() error
+}
+
+type LocalPaseto interface {
+	Generate(subject, audience string, customClaims map[string]any) (auth.Tokens, error)
+	ValidateAccess(token string) (auth.LocalClaims, error)
+	ValidateRefresh(token string) (auth.LocalClaims, error)
+}
+
+type PublicPaseto interface {
+	Generate(subject, audience string, customClaims map[string]any) (auth.PublicTokens, error)
+	ValidateAccess(token string) (auth.PublicClaims, error)
+	ValidateRefresh(token string) (auth.PublicClaims, error)
+}
+
+type JWTLocal interface {
+	Generate(subject, audience string, customClaims map[string]any) (auth.Tokens, error)
+	ValidateAccess(token string) (auth.JWTLocalClaims, error)
+	ValidateRefresh(token string) (auth.JWTLocalClaims, error)
+}
+
+type JWTPublic interface {
+	Generate(subject, audience string, customClaims map[string]any) (auth.Tokens, error)
+	ValidateAccess(token string) (auth.JWTPublicClaims, error)
+	ValidateRefresh(token string) (auth.JWTPublicClaims, error)
 }

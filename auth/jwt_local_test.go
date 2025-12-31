@@ -155,7 +155,7 @@ func TestJWTLocalCustomClaims(t *testing.T) {
 		t.Fatalf("NewJWTLocal error: %v", err)
 	}
 
-	customClaims := map[string]interface{}{
+	customClaims := map[string]any{
 		"user_id":  "user-123",
 		"role":     "admin",
 		"org_id":   "org-456",
@@ -330,12 +330,12 @@ func TestJWTLocalParsesTimesFromClaims(t *testing.T) {
 func TestNumericDateHelperCoversTypes(t *testing.T) {
 	now := time.Now().UTC()
 	claims := jwt.MapClaims{
-		"exp": jwt.NewNumericDate(now),
-		"iat": json.Number("123"),
-		"nbf": float64(456),
+		"exp":   jwt.NewNumericDate(now),
+		"iat":   json.Number("123"),
+		"nbf":   float64(456),
 		"int64": int64(789),
-		"int": 7,
-		"bad": "noop",
+		"int":   7,
+		"bad":   "noop",
 	}
 	if got := numericDateFromClaims(claims, "exp"); got.IsZero() {
 		t.Fatalf("expected exp from *NumericDate")

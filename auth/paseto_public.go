@@ -32,7 +32,7 @@ type PublicClaims struct {
 	IssuedAt     time.Time
 	NotBefore    time.Time
 	TokenType    PublicTokenType
-	CustomClaims map[string]interface{}
+	CustomClaims map[string]any
 }
 
 // PublicPasetoConfig holds configuration for PASETO v4 public token generation.
@@ -109,7 +109,7 @@ type PublicTokens struct {
 
 // Generate issues a new pair of access and refresh public tokens for the given subject and audience.
 // customClaims is an optional map of additional claims to include in both tokens.
-func (p *PublicPaseto) Generate(subject, audience string, customClaims map[string]interface{}) (PublicTokens, error) {
+func (p *PublicPaseto) Generate(subject, audience string, customClaims map[string]any) (PublicTokens, error) {
 	access, err := p.makeToken(subject, audience, PublicAccessToken, p.accessTTL, p.accessPrivateKey, customClaims)
 	if err != nil {
 		return PublicTokens{}, err
@@ -131,7 +131,9 @@ func (p *PublicPaseto) ValidateRefresh(token string) (PublicClaims, error) {
 	return p.parse(token, PublicRefreshToken, p.refreshPublicKey)
 }
 
-func (p *PublicPaseto) makeToken(subject, audience string, typ PublicTokenType, ttl time.Duration, key psto.V4AsymmetricSecretKey, customClaims map[string]interface{}) (string, error) {
+func (p *PublicPaseto) makeToken(
+	subject, audience string, typ PublicTokenType, ttl time.Duration, key psto.V4AsymmetricSecretKey, customClaims map[string]any,
+) (string, error) {
 	now := time.Now().UTC()
 	exp := now.Add(ttl)
 
@@ -180,7 +182,7 @@ func buildPublicClaims(value *psto.Token, expected PublicTokenType) PublicClaims
 	exp, _ := value.GetExpiration()
 
 	allClaims := value.Claims()
-	customClaims := make(map[string]interface{})
+	customClaims := make(map[string]any)
 	reservedKeys := map[string]bool{
 		"sub": true, "aud": true, "iss": true, "jti": true,
 		"exp": true, "iat": true, "nbf": true, "typ": true,

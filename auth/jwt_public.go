@@ -37,7 +37,7 @@ type JWTPublicClaims struct {
 	IssuedAt     time.Time
 	NotBefore    time.Time
 	TokenType    JWTPublicTokenType
-	CustomClaims map[string]interface{}
+	CustomClaims map[string]any
 }
 
 // JWTPublicConfig holds configuration for JWT public (asymmetric) token generation using RSA.
@@ -96,7 +96,7 @@ var rsaGenerateKey = rsa.GenerateKey
 
 // Generate issues a new pair of access and refresh JWT tokens for the given subject and audience.
 // customClaims is an optional map of additional claims to include in both tokens.
-func (j *JWTPublic) Generate(subject, audience string, customClaims map[string]interface{}) (Tokens, error) {
+func (j *JWTPublic) Generate(subject, audience string, customClaims map[string]any) (Tokens, error) {
 	access, err := j.makeToken(subject, audience, JWTPublicAccessToken, j.accessTTL, j.accessPrivateKey, customClaims)
 	if err != nil {
 		return Tokens{}, err
@@ -118,7 +118,7 @@ func (j *JWTPublic) ValidateRefresh(token string) (JWTPublicClaims, error) {
 	return j.parse(token, JWTPublicRefreshToken, j.refreshPublicKey)
 }
 
-func (j *JWTPublic) makeToken(subject, audience string, typ JWTPublicTokenType, ttl time.Duration, privateKey *rsa.PrivateKey, customClaims map[string]interface{}) (string, error) {
+func (j *JWTPublic) makeToken(subject, audience string, typ JWTPublicTokenType, ttl time.Duration, privateKey *rsa.PrivateKey, customClaims map[string]any) (string, error) {
 	now := time.Now().UTC()
 	exp := now.Add(ttl)
 
@@ -149,7 +149,7 @@ func (j *JWTPublic) makeToken(subject, audience string, typ JWTPublicTokenType, 
 }
 
 func (j *JWTPublic) parse(tokenString string, expected JWTPublicTokenType, publicKey *rsa.PublicKey) (JWTPublicClaims, error) {
-	token, err := jwtPublicParseWithClaims(tokenString, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwtPublicParseWithClaims(tokenString, jwt.MapClaims{}, func(token *jwt.Token) (any, error) {
 		// Validate signing method
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, errors.New("jwt: unexpected signing method")
@@ -181,7 +181,7 @@ func (j *JWTPublic) parse(tokenString string, expected JWTPublicTokenType, publi
 	}
 
 	// Extract custom claims (filter out standard claims)
-	customClaims := make(map[string]interface{})
+	customClaims := make(map[string]any)
 	reservedKeys := map[string]bool{
 		"sub": true, "aud": true, "iss": true, "exp": true,
 		"iat": true, "nbf": true, "typ": true, "jti": true,
