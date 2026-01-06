@@ -15,6 +15,7 @@ import (
 func tempCfg(t *testing.T, level Level, queue, batch int, batchDur time.Duration) (Config, string) {
 	t.Helper()
 	file := filepath.Join(t.TempDir(), "zap-echo.log")
+
 	return Config{
 		ServiceName: "svc-echo",
 		Env:         "test",
@@ -276,10 +277,10 @@ func TestZapEcho_ErrorMethodsExplicit(t *testing.T) {
 	// Call Error methods one at a time to ensure they're queued
 	l.Error("error 1")
 	time.Sleep(20 * time.Millisecond) // Let batch process
-	
+
 	l.Errorf("errorf %d", 2)
 	time.Sleep(20 * time.Millisecond)
-	
+
 	l.Errorj(log.JSON{"num": 3})
 	time.Sleep(20 * time.Millisecond)
 
@@ -335,7 +336,7 @@ func TestZapEcho_LevelFiltering_AboveError(t *testing.T) {
 	// We'll use a custom level by setting it directly
 	cfg, file := tempCfg(t, DebugLevel, 20, 20, 100*time.Millisecond)
 	l := ZapEcho(cfg)
-	
+
 	// Set level to OFF (higher than ERROR) to filter everything
 	l.SetLevel(log.OFF)
 
@@ -383,16 +384,16 @@ func TestZapEcho_PanicMethods(t *testing.T) {
 	// The best we can do is ensure they're queued with large queue and never processed
 	cfg, _ := tempCfg(t, DebugLevel, 1000, 1000, 10*time.Hour) // huge batch, never flushes
 	l := ZapEcho(cfg)
-	
+
 	// Queue the methods - they'll be queued but never batch-flushed due to huge batch size
 	l.Fatal("fatal message")
 	l.Fatalf("fatal %s", "formatted")
 	l.Fatalj(log.JSON{"fatal": true})
-	
+
 	l.Panic("panic message")
 	l.Panicf("panic %s", "formatted")
 	l.Panicj(log.JSON{"panic": true})
-	
+
 	// Don't call Sync - just close the channel without flushing
 	// Actually, we can't avoid Sync without leaking the goroutine
 	// So we accept that Fatal/Panic can't be fully covered without special setup
@@ -407,7 +408,7 @@ func TestZapEcho_InvalidLevel(t *testing.T) {
 			t.Fatal("Expected panic for invalid level")
 		}
 	}()
-	
+
 	cfg := Config{
 		ServiceName: "test",
 		Env:         "test",
@@ -419,7 +420,7 @@ func TestZapEcho_InvalidLevel(t *testing.T) {
 		BatchSize: 5,
 		BatchDur:  100 * time.Millisecond,
 	}
-	
+
 	_ = ZapEcho(cfg)
 }
 

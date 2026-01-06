@@ -112,7 +112,7 @@ func (z *zapEcho) SetHeader(h string) {
 }
 
 // Print outputs message using Print method.
-func (z *zapEcho) Print(i ...interface{}) {
+func (z *zapEcho) Print(i ...any) {
 	if z.level > log.INFO {
 		return
 	}
@@ -122,7 +122,7 @@ func (z *zapEcho) Print(i ...interface{}) {
 }
 
 // Printf outputs formatted message using Printf method.
-func (z *zapEcho) Printf(format string, args ...interface{}) {
+func (z *zapEcho) Printf(format string, args ...any) {
 	if z.level > log.INFO {
 		return
 	}
@@ -137,12 +137,13 @@ func (z *zapEcho) Printj(j log.JSON) {
 		return
 	}
 	z.log(func() {
-		z.logger.Sugar().Infow("", j)
+		message, keyValues := keyValues(j)
+		z.logger.Sugar().Infow(message, keyValues...)
 	})
 }
 
 // Debug outputs message at Debug level.
-func (z *zapEcho) Debug(i ...interface{}) {
+func (z *zapEcho) Debug(i ...any) {
 	if z.level > log.DEBUG {
 		return
 	}
@@ -152,7 +153,7 @@ func (z *zapEcho) Debug(i ...interface{}) {
 }
 
 // Debugf outputs formatted message at Debug level.
-func (z *zapEcho) Debugf(format string, args ...interface{}) {
+func (z *zapEcho) Debugf(format string, args ...any) {
 	if z.level > log.DEBUG {
 		return
 	}
@@ -167,12 +168,13 @@ func (z *zapEcho) Debugj(j log.JSON) {
 		return
 	}
 	z.log(func() {
-		z.logger.Sugar().Debugw("", j)
+		message, keyValues := keyValues(j)
+		z.logger.Sugar().Debugw(message, keyValues...)
 	})
 }
 
 // Info outputs message at Info level.
-func (z *zapEcho) Info(i ...interface{}) {
+func (z *zapEcho) Info(i ...any) {
 	if z.level > log.INFO {
 		return
 	}
@@ -182,7 +184,7 @@ func (z *zapEcho) Info(i ...interface{}) {
 }
 
 // Infof outputs formatted message at Info level.
-func (z *zapEcho) Infof(format string, args ...interface{}) {
+func (z *zapEcho) Infof(format string, args ...any) {
 	if z.level > log.INFO {
 		return
 	}
@@ -197,12 +199,13 @@ func (z *zapEcho) Infoj(j log.JSON) {
 		return
 	}
 	z.log(func() {
-		z.logger.Sugar().Infow("", j)
+		message, keyValues := keyValues(j)
+		z.logger.Sugar().Infow(message, keyValues...)
 	})
 }
 
 // Warn outputs message at Warn level.
-func (z *zapEcho) Warn(i ...interface{}) {
+func (z *zapEcho) Warn(i ...any) {
 	if z.level > log.WARN {
 		return
 	}
@@ -212,7 +215,7 @@ func (z *zapEcho) Warn(i ...interface{}) {
 }
 
 // Warnf outputs formatted message at Warn level.
-func (z *zapEcho) Warnf(format string, args ...interface{}) {
+func (z *zapEcho) Warnf(format string, args ...any) {
 	if z.level > log.WARN {
 		return
 	}
@@ -227,12 +230,13 @@ func (z *zapEcho) Warnj(j log.JSON) {
 		return
 	}
 	z.log(func() {
-		z.logger.Sugar().Warnw("", j)
+		message, keyValues := keyValues(j)
+		z.logger.Sugar().Warnw(message, keyValues...)
 	})
 }
 
 // Error outputs message at Error level.
-func (z *zapEcho) Error(i ...interface{}) {
+func (z *zapEcho) Error(i ...any) {
 	if z.level > log.ERROR {
 		return
 	}
@@ -242,7 +246,7 @@ func (z *zapEcho) Error(i ...interface{}) {
 }
 
 // Errorf outputs formatted message at Error level.
-func (z *zapEcho) Errorf(format string, args ...interface{}) {
+func (z *zapEcho) Errorf(format string, args ...any) {
 	if z.level > log.ERROR {
 		return
 	}
@@ -257,19 +261,20 @@ func (z *zapEcho) Errorj(j log.JSON) {
 		return
 	}
 	z.log(func() {
-		z.logger.Sugar().Errorw("", j)
+		message, keyValues := keyValues(j)
+		z.logger.Sugar().Errorw(message, keyValues...)
 	})
 }
 
 // Fatal outputs message at Fatal level and exits.
-func (z *zapEcho) Fatal(i ...interface{}) {
+func (z *zapEcho) Fatal(i ...any) {
 	z.log(func() {
 		z.logger.Sugar().Fatal(i...)
 	})
 }
 
 // Fatalf outputs formatted message at Fatal level and exits.
-func (z *zapEcho) Fatalf(format string, args ...interface{}) {
+func (z *zapEcho) Fatalf(format string, args ...any) {
 	z.log(func() {
 		z.logger.Sugar().Fatalf(format, args...)
 	})
@@ -283,14 +288,14 @@ func (z *zapEcho) Fatalj(j log.JSON) {
 }
 
 // Panic outputs message at Panic level and panics.
-func (z *zapEcho) Panic(i ...interface{}) {
+func (z *zapEcho) Panic(i ...any) {
 	z.log(func() {
 		z.logger.Sugar().Panic(i...)
 	})
 }
 
 // Panicf outputs formatted message at Panic level and panics.
-func (z *zapEcho) Panicf(format string, args ...interface{}) {
+func (z *zapEcho) Panicf(format string, args ...any) {
 	z.log(func() {
 		z.logger.Sugar().Panicf(format, args...)
 	})
@@ -299,7 +304,8 @@ func (z *zapEcho) Panicf(format string, args ...interface{}) {
 // Panicj outputs JSON message at Panic level and panics.
 func (z *zapEcho) Panicj(j log.JSON) {
 	z.log(func() {
-		z.logger.Sugar().Panicw("", j)
+		message, keyValues := keyValues(j)
+		z.logger.Sugar().Panicw(message, keyValues...)
 	})
 }
 
@@ -369,4 +375,20 @@ func toGommonLevel(l Level) log.Lvl {
 	default:
 		return log.ERROR
 	}
+}
+
+func keyValues(j log.JSON) (string, []any) {
+	keyValues := make([]any, 0)
+	var message string
+	for key, value := range j {
+		if key == "message" {
+			message = value.(string)
+
+			continue
+		}
+
+		keyValues = append(keyValues, key, value)
+	}
+
+	return message, keyValues
 }
