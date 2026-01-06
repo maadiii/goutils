@@ -52,7 +52,7 @@ func TestHertzMiddleware_Success(t *testing.T) {
 	})
 
 	middleware(context.Background(), ctx)
-	
+
 	// Give goroutine time to execute
 	time.Sleep(50 * time.Millisecond)
 
@@ -87,7 +87,7 @@ func TestHertzMiddleware_3xxRedirect(t *testing.T) {
 	})
 
 	middleware(context.Background(), ctx)
-	
+
 	time.Sleep(50 * time.Millisecond)
 
 	if !nextCalled {
@@ -107,7 +107,7 @@ func TestHertzMiddleware_4xxClientError(t *testing.T) {
 	ctx.Request.SetRequestURI("/api/notfound")
 	ctx.Request.SetMethod("GET")
 	ctx.Response.SetStatusCode(404)
-	
+
 	// Add error to trigger error logging
 	ctx.Errors = append(ctx.Errors, errors.NewPublic("not found error"))
 
@@ -120,7 +120,7 @@ func TestHertzMiddleware_4xxClientError(t *testing.T) {
 	})
 
 	middleware(context.Background(), ctx)
-	
+
 	time.Sleep(50 * time.Millisecond)
 
 	if !nextCalled {
@@ -151,7 +151,7 @@ func TestHertzMiddleware_4xxNoErrors(t *testing.T) {
 	})
 
 	middleware(context.Background(), ctx)
-	
+
 	time.Sleep(50 * time.Millisecond)
 
 	if !nextCalled {
@@ -175,7 +175,7 @@ func TestHertzMiddleware_5xxServerError(t *testing.T) {
 	ctx.Request.SetRequestURI("/api/servererror")
 	ctx.Request.SetMethod("PUT")
 	ctx.Response.SetStatusCode(500)
-	
+
 	// Add error to trigger error logging
 	ctx.Errors = append(ctx.Errors, errors.NewPublic("internal server error"))
 
@@ -188,7 +188,7 @@ func TestHertzMiddleware_5xxServerError(t *testing.T) {
 	})
 
 	middleware(context.Background(), ctx)
-	
+
 	time.Sleep(50 * time.Millisecond)
 
 	if !nextCalled {
@@ -218,7 +218,7 @@ func TestHertzMiddleware_SwaggerPath(t *testing.T) {
 	})
 
 	middleware(context.Background(), ctx)
-	
+
 	time.Sleep(50 * time.Millisecond)
 
 	if !nextCalled {
@@ -253,7 +253,7 @@ func TestHertzMiddleware_HealthPath(t *testing.T) {
 	})
 
 	middleware(context.Background(), ctx)
-	
+
 	time.Sleep(50 * time.Millisecond)
 
 	if !nextCalled {
@@ -278,7 +278,7 @@ func TestHertzMiddleware_ErrorWithStack(t *testing.T) {
 	ctx.Request.SetRequestURI("/api/error")
 	ctx.Request.SetMethod("POST")
 	ctx.Response.SetStatusCode(500)
-	
+
 	// Add error with stack trace (multiline error)
 	ctx.Errors = append(ctx.Errors, errors.NewPublic("error message\nstack trace line 1\nstack trace line 2"))
 
@@ -291,7 +291,7 @@ func TestHertzMiddleware_ErrorWithStack(t *testing.T) {
 	})
 
 	middleware(context.Background(), ctx)
-	
+
 	time.Sleep(50 * time.Millisecond)
 
 	if !nextCalled {
@@ -310,7 +310,7 @@ func TestHertzMiddleware_ErrorWithStack(t *testing.T) {
 func TestStack(t *testing.T) {
 	ctx := app.NewContext(0)
 	ctx.Errors = append(ctx.Errors, errors.NewPublic("simple error"))
-	
+
 	msg, stack := stack(ctx)
 	if msg != "simple error" {
 		t.Fatalf("expected message 'simple error', got %s", msg)
@@ -323,7 +323,7 @@ func TestStack(t *testing.T) {
 func TestStackWithMultiline(t *testing.T) {
 	ctx := app.NewContext(0)
 	ctx.Errors = append(ctx.Errors, errors.NewPublic("error\nline1\nline2"))
-	
+
 	msg, stack := stack(ctx)
 	if msg != "error" {
 		t.Fatalf("expected message 'error', got %s", msg)

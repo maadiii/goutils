@@ -62,7 +62,7 @@ func TestEchoHandlerWithValidationError(t *testing.T) {
 	c := e.NewContext(req, rec)
 
 	handler := EchoHandler(false)
-	err := &validator.InvalidValidationError{}
+	err := &validator.ValidationErrors{}
 	handler(err, c)
 
 	if rec.Code != http.StatusBadRequest {
@@ -162,7 +162,7 @@ func TestEchoHandlerDevMode(t *testing.T) {
 	if len(body) == 0 {
 		t.Fatalf("expected non-empty body in dev mode")
 	}
-	
+
 	// Body should contain more than just the error message (should have stack trace)
 	if !strings.Contains(body, "test error with stack") {
 		t.Fatalf("body should contain error message")

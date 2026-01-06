@@ -3,10 +3,13 @@ package log
 import (
 	"context"
 	"strings"
+	"sync"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/maadiii/goutils"
 )
+
+var mu sync.Mutex
 
 func HertzMiddleware(logger goutils.Logger) app.HandlerFunc {
 	return func(c context.Context, ctx *app.RequestContext) {
@@ -22,6 +25,9 @@ func HertzMiddleware(logger goutils.Logger) app.HandlerFunc {
 }
 
 func logRequest(c context.Context, ctx *app.RequestContext, logger goutils.Logger) { //nolint
+	mu.Lock()
+	defer mu.Unlock()
+
 	if strings.Contains(string(ctx.URI().Path()), "swagger") ||
 		strings.Contains(string(ctx.URI().Path()), "health") {
 		return

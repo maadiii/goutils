@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/gommon/log"
 )
 
 func EchoHandler(devMode bool) func(err error, c echo.Context) {
@@ -32,21 +33,39 @@ func HandleEchoPanic(devMode bool) echo.MiddlewareFunc {
 }
 
 func handleError(devMode bool, err error, c echo.Context) {
+	errhttp := &echo.HTTPError{
+		Message: err.Error(),
+	}
+
 	switch e := err.(type) {
 	case Error:
 	case *Error:
 		if e.Type != 0 {
-			_ = c.NoContent(e.Type)
+			errhttp.Code = e.Type
 		} else {
-			_ = c.NoContent(http.StatusInternalServerError)
+			errhttp.Code = http.StatusInternalServerError
 		}
-	case validator.ValidationErrors:
+
+		if !devMode {
+			errhttp.Message = http.StatusText(errhttp.Code)
+		}
 	case *validator.InvalidValidationError:
-		_ = c.NoContent(http.StatusBadRequest)
+	case validator.ValidationErrors:
+	case *validator.ValidationErrors:
+		errhttp.Code = http.StatusBadRequest
+		if !devMode {
+			errhttp.Message = http.StatusText(http.StatusBadRequest)
+		}
 	case *echo.HTTPError:
-		_ = c.NoContent(e.Code)
+		errhttp.Code = e.Code
+		if !devMode {
+			errhttp.Message = http.StatusText(e.Code)
+		}
 	default:
-		_ = c.NoContent(http.StatusInternalServerError)
+		errhttp.Code = http.StatusInternalServerError
+		if !devMode {
+			errhttp.Message = http.StatusText(http.StatusInternalServerError)
+		}
 	}
 
 	errMsg := err.Error()
@@ -59,12 +78,12 @@ func handleError(devMode bool, err error, c echo.Context) {
 
 		return ""
 	}()
-	final := errMsg + "\n" + stack
-	c.Echo().Logger.Error(final)
+	stackedErrMsg := errMsg + "\n" + stack
 
 	if devMode {
-		_, _ = c.Response().Write([]byte(final))
-	} else {
-		_, _ = c.Response().Write([]byte(errMsg))
+		errhttp.Message = stackedErrMsg
 	}
+
+	c.Echo().Logger.Errorj(log.JSON{"code": errhttp.Code, "message": errMsg, "stack": stack})
+	_ = c.String(errhttp.Code, errhttp.Message.(string))
 }

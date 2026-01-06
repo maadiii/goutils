@@ -11,6 +11,7 @@ linters:
     - gocognit
     - gochecknoinits
     - godot
+    - nlreturn
 
   disable:
     - lll
