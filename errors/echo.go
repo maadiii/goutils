@@ -84,6 +84,9 @@ func handleError(devMode bool, err error, c echo.Context) {
 		errhttp.Message = stackedErrMsg
 	}
 
-	c.Echo().Logger.Errorj(log.JSON{"code": errhttp.Code, "message": errMsg, "stack": stack})
 	_ = c.String(errhttp.Code, errhttp.Message.(string))
+
+	if !devMode {
+		c.Echo().Logger.Errorj(log.JSON{"code": errhttp.Code, "message": errMsg, "stack": stack})
+	}
 }
