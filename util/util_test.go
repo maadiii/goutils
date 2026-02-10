@@ -6,7 +6,7 @@ import (
 
 func TestGetPtrValue_WithPointer(t *testing.T) {
 	val := 42
-	result := GetPtrValue[int, *int](&val)
+	result := GetPtrValue(&val)
 	if result != 42 {
 		t.Fatalf("expected 42, got %d", result)
 	}
@@ -14,7 +14,7 @@ func TestGetPtrValue_WithPointer(t *testing.T) {
 
 func TestGetPtrValue_WithNil(t *testing.T) {
 	var p *int
-	result := GetPtrValue[int, *int](p)
+	result := GetPtrValue(p)
 	if result != 0 {
 		t.Fatalf("expected 0 for nil pointer, got %d", result)
 	}
@@ -55,7 +55,7 @@ func TestToPtrOrNil_WithNonZero(t *testing.T) {
 
 func TestGetPtrValue_String(t *testing.T) {
 	str := "hello"
-	result := GetPtrValue[string, *string](&str)
+	result := GetPtrValue(&str)
 	if result != "hello" {
 		t.Fatalf("expected 'hello', got %q", result)
 	}

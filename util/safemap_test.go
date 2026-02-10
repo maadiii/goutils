@@ -1,0 +1,112 @@
+package util
+
+import (
+	"math/rand"
+	"slices"
+	"testing"
+)
+
+func TestNewAndSet(t *testing.T) {
+	sm := NewSafeMap[int, string]()
+	sm.Set(1, "one")
+	sm.Set(2, "two")
+
+	if sm.Len() != 2 {
+		t.Errorf("Expected length 2, got %d", sm.Len())
+	}
+}
+
+func TestGet(t *testing.T) {
+	sm := NewSafeMap[int, string]()
+	sm.Set(1, "one")
+
+	val, ok := sm.Get(1)
+	if !ok || val != "one" {
+		t.Errorf("Expected 'one', got %s", val)
+	}
+	_, ok = sm.Get(2)
+	if ok {
+		t.Errorf("Expected false, got true")
+	}
+}
+
+func TestDelete(t *testing.T) {
+	sm := NewSafeMap[int, string]()
+	sm.Set(1, "one")
+	sm.Delete(1)
+	_, ok := sm.Get(1)
+	if ok {
+		t.Errorf("Expected key 1 to be deleted")
+	}
+
+	sm.Delete(2) // just make sure this doesn't panic
+}
+
+func TestLen(t *testing.T) {
+	sm := NewSafeMap[int, string]()
+	sm.Set(1, "one")
+	sm.Set(2, "two")
+	sm.Set(3, "three")
+	sm.Delete(2)
+
+	if sm.Len() != 2 {
+		t.Errorf("Expected length 2, got %d", sm.Len())
+	}
+}
+
+func TestForEach(t *testing.T) {
+	sm := NewSafeMap[int, string]()
+	sm.Set(1, "one")
+	sm.Set(2, "two")
+
+	keys := make([]int, 0)
+	sm.ForEach(func(k int, v string) {
+		keys = append(keys, k)
+	})
+
+	if len(keys) != 2 {
+		t.Errorf("Expected 2 keys, got %d", len(keys))
+	}
+
+	// Check if keys 1 and 2 are present
+	if !slices.Contains(keys, 1) || !slices.Contains(keys, 2) {
+		t.Errorf("Expected keys 1 and 2, got %v", keys)
+	}
+}
+
+// Benchmark Get
+func BenchmarkGetConcurrent(b *testing.B) {
+	ds := NewSafeMap[uint64, uint64]()
+	// Pre-fill the data store with test data if needed
+	for i := range 100000 {
+		ds.Set(uint64(i), uint64(i))
+	}
+	b.SetParallelism(100)
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			r := rand.Uint64() % 100000
+			_, _ = ds.Get(r)
+		}
+	})
+}
+
+// fool the compiler
+var silly uint64
+
+// Benchmark Set
+func BenchmarkSetConcurrent(b *testing.B) {
+	ds := NewSafeMap[uint64, uint64]()
+	b.SetParallelism(100)
+	b.ResetTimer()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			r := rand.Uint64() % 100000
+			silly, _ = ds.Get(r)
+			ds.Set(r, r)
+			silly, _ = ds.Get(r)
+
+		}
+	})
+}
