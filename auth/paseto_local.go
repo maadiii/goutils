@@ -9,6 +9,11 @@ import (
 	psto "aidanwoods.dev/go-paseto"
 )
 
+var (
+	ErrExpired             = errors.New("paseto: token expired")
+	ErrUnexpectedTokenType = errors.New("paseto: unexpected token type")
+)
+
 // test hook for PASETO v4 local encryption
 var pasetoV4Encrypt = func(tok psto.Token, key psto.V4SymmetricKey) (string, error) {
 	return tok.V4Encrypt(key, nil), nil
@@ -187,11 +192,11 @@ func validateLocalToken(value *psto.Token, expected LocalTokenType) error {
 	typ := ""
 	_ = value.Get("typ", &typ)
 	if typ != string(expected) {
-		return errors.New("paseto: unexpected token type")
+		return ErrUnexpectedTokenType
 	}
 	exp, _ := value.GetExpiration()
 	if time.Now().UTC().After(exp) {
-		return errors.New("paseto: token expired")
+		return ErrExpired
 	}
 	return nil
 }
